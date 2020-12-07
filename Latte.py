@@ -50,7 +50,7 @@ def main(argv):
     prog_tree = parser.program()
     compiler = Compiler()
 
-    compiler.enterProgram(prog_tree)
+    compiler.enter_program(prog_tree)
 
 
 if __name__ == '__main__':
