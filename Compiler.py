@@ -23,7 +23,7 @@ def get_default_value(typ):
     if typ == 'string':
         return ''
 
-    if typ == 'bool':
+    if typ == 'boolean':
         return 'false'
 
     return None
@@ -41,7 +41,9 @@ class Compiler:
 
     def add_bultin(self) -> None:
         self.envs[0]['printInt'] = Var('[int]', None, 'void')
+        self.envs[0]['readInt'] = Var('[]', None, 'int')
         self.envs[0]['printString'] = Var('[string]', None, 'void')
+        self.envs[0]['readString'] = Var('[]', None, 'string')
 
     def enter_program(self, ctx: LatteParser.ProgramContext) -> None:
         self.add_bultin()
@@ -133,10 +135,10 @@ class Compiler:
             exp = ctx.expr()
             var_exp = self.enter_expr(exp)
 
-            if var_exp.type != "bool":
+            if var_exp.type not in ["boolean", "int"]:
                 error(ctx, "Mismatch in types in unary operator")
 
-            return Var('bool')
+            return Var(var_exp.type)
         elif isinstance(ctx, LatteParser.EMulOpContext):
             val_exps = [self.enter_expr(exp) for exp in ctx.expr()]
 
@@ -162,30 +164,30 @@ class Compiler:
             var_left = self.enter_expr(left)
             var_right = self.enter_expr(right)
 
-            if var_left.type != var_right.type or var_left.type != 'int':
+            if var_left.type != var_right.type or var_left.type not in ["int", "boolean"]:
                 error(ctx, "Mismatch in types in comparison")
 
-            return Var('bool')
+            return Var('boolean')
         elif isinstance(ctx, LatteParser.EAndContext):
             left, right = ctx.expr()
 
             var_left = self.enter_expr(left)
             var_right = self.enter_expr(right)
 
-            if var_left.type != var_right.type and var_left.type != 'bool':
+            if var_left.type != var_right.type and var_left.type != 'boolean':
                 error(ctx, "Mismatch in types in comparison")
 
-            return Var('bool')
+            return Var('boolean')
         elif isinstance(ctx, LatteParser.EOrContext):
             left, right = ctx.expr()
 
             var_left = self.enter_expr(left)
             var_right = self.enter_expr(right)
 
-            if var_left.type != var_right.type and var_left.type != 'bool':
+            if var_left.type != var_right.type and var_left.type != 'boolean':
                 error(ctx, "Mismatch in types in comparison")
 
-            return Var('bool')
+            return Var('boolean')
         elif isinstance(ctx, LatteParser.EIdContext):
             var_name = ctx.getText()
             for env in self.envs[::-1]:
@@ -195,9 +197,9 @@ class Compiler:
         elif isinstance(ctx, LatteParser.EIntContext):
             return Var('int', ctx.INT().getText())
         elif isinstance(ctx, LatteParser.ETrueContext):
-            return Var('bool', 'True')
+            return Var('boolean', 'True')
         elif isinstance(ctx, LatteParser.EFalseContext):
-            return Var('bool', 'False')
+            return Var('boolean', 'False')
         elif isinstance(ctx, LatteParser.EFunCallContext):
             fun_name = ctx.ID().getText()
             var_list = [self.enter_expr(x) for x in ctx.expr()]
@@ -226,8 +228,8 @@ class Compiler:
         condition = ctx.expr()
         condition_var = self.enter_expr(condition)
 
-        if condition_var.type != 'bool':
-            error(ctx, "Condition doesn't have type bool")
+        if condition_var.type != 'boolean':
+            error(ctx, "Condition doesn't have type boolean")
 
         self.envs.append({})
         self.enter_stmt(ctx.stmt(), ret_type)
@@ -272,8 +274,8 @@ class Compiler:
         exp = ctx.expr()
         exp_val = self.enter_expr(exp)
 
-        if exp_val.type != "bool":
-            error(ctx, "Expression isn't of type bool")
+        if exp_val.type != "boolean":
+            error(ctx, "Expression isn't of type boolean")
 
         self.envs.append({})
         self.enter_stmt(ctx.stmt(), ret_type)
@@ -283,8 +285,8 @@ class Compiler:
         exp = ctx.expr();
         exp_val = self.enter_expr(exp)
 
-        if exp_val.type != "bool":
-            error(ctx, "Expression isn't of type bool")
+        if exp_val.type != "boolean":
+            error(ctx, "Expression isn't of type boolean")
 
         for i in range(2):
             self.envs.append({})
