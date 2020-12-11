@@ -14,7 +14,9 @@ class MyErrorListener(ErrorListener):
         super(MyErrorListener, self).__init__()
 
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        raise Exception("Oh no!")
+        print("\033[91m" + "Syntax error at " + str(line) + ":" + str(column) + "\033[0m")
+        print(msg)
+        sys.exit(1)
 
     def reportAmbiguity(self, recognizer, dfa, startIndex, stopIndex, exact, ambigAlts, configs):
         raise Exception("Oh no!!")

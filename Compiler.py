@@ -5,8 +5,8 @@ from antlr.LatteParser import LatteParser
 from enum import Enum
 
 def error(ctx, msg) -> None:
-    sys.stderr.write("ERROR\n")
-    sys.stderr.write(msg + "\n")
+    print("\033[91m" + "Compilation error at " + str(ctx.start.line) + ":" + str(ctx.start.column) + "\033[0m")
+    print(msg)
     sys.exit(1)
 
 
@@ -70,8 +70,29 @@ class Compiler:
             arg_typ = arguments.type_(i).getText()
             args.append(arg_typ)
 
-        args_str = '[' + ', '.join(args) + ']'
+        args_str = ' -> '.join(args)
         self.envs[-1][name] = Var(args_str, None, typ)
+
+    def check_for_return_stmt(self, ctx: LatteParser.StmtContext) -> bool:
+        if isinstance(ctx, (LatteParser.VRetContext, LatteParser.RetContext)):
+            return True
+        elif isinstance(ctx, LatteParser.CondElseContext):
+            stmt_true = ctx.stmt(0)
+            stmt_false = ctx.stmt(1)
+
+            if self.check_for_return_stmt(stmt_true) and self.check_for_return_stmt(stmt_false):
+                return True
+        return False
+
+    def check_for_return_block(self, ctx: LatteParser.BlockContext) -> bool:
+        for stmt in ctx.children:
+            if isinstance(stmt, antlr4.TerminalNode):
+                continue
+            elif isinstance(stmt, LatteParser.StmtContext):
+                if self.check_for_return_stmt(stmt):
+                    return True;
+
+        return False
 
     def enter_top_def(self, ctx: LatteParser.TopDefContext) -> None:
         self.envs.append({})
@@ -80,14 +101,20 @@ class Compiler:
         args = ctx.arg()
         block = ctx.block()
 
-        print(typ, name, args, block)
+        if not self.check_for_return_block(block):
+            error(ctx, "No return statement in every possible branch")
+
         if args is not None:
             for i in range(len(args.type_())):
                 arg_typ = args.type_(i).getText()
                 arg_name = args.ID(i).getText()
                 arg_val = get_default_value(arg_typ)
 
+                if arg_name in self.envs[-1]:
+                    error(ctx, "Repeated argument name")
+
                 self.envs[-1][arg_name] = Var(arg_typ, arg_val)
+
         self.enter_block(block, typ)
         self.envs.pop()
 
@@ -117,6 +144,9 @@ class Compiler:
             var_item: LatteParser.ItemContext = ctx.item(i)
             var_name = var_item.ID().getText()
             item_expr = var_item.expr()
+
+            if var_name in self.envs[-1]:
+                error(ctx, "Variable already declared: " + var_name)
 
             if item_expr is None:
                 self.envs[-1][var_name] = Var(var_type, default_value)
@@ -204,7 +234,7 @@ class Compiler:
             fun_name = ctx.ID().getText()
             var_list = [self.enter_expr(x) for x in ctx.expr()]
             var_types = [x.type for x in var_list]
-            var_type = '[' + ', '.join(var_types) + ']'
+            var_type = ' -> '.join(var_types)
             fun = None
 
             for env in self.envs[::-1]:
@@ -248,7 +278,7 @@ class Compiler:
                 else:
                     return
 
-        error(ctx, "Variable doesn't exist")
+        error(ctx, "Variable not declared: " + var_name)
 
     def enter_incr(self, ctx: LatteParser.IncrContext) -> None:
         var_name = ctx.ID().getText()
