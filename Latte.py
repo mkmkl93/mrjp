@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
-import os
 import sys
-
 import antlr4
+from absl import flags
+from Compiler import Compiler
 from antlr.LatteLexer import LatteLexer
 from antlr.LatteParser import LatteParser
 from antlr4.error.ErrorListener import ErrorListener
-from Compiler import Compiler
+
+flags.DEFINE_boolean('debug', False, 'Turn on debug comments')
+FLAGS = flags.FLAGS
+Compiler.DEBUG = FLAGS['debug']
 
 class MyErrorListener(ErrorListener):
     def __init__(self):
@@ -18,22 +21,8 @@ class MyErrorListener(ErrorListener):
         print(msg)
         sys.exit(1)
 
-    def reportAmbiguity(self, recognizer, dfa, startIndex, stopIndex, exact, ambigAlts, configs):
-        raise Exception("Oh no!!")
-
-    # def reportAttemptingFullContext(self, recognizer, dfa, startIndex, stopIndex, conflictingAlts, configs):
-    #     print(startIndex, stopIndex, conflictingAlts);
-    #     raise Exception("Oh no!!!")
-
-    # def reportContextSensitivity(self, recognizer, dfa, startIndex, stopIndex, prediction, configs):
-    #     print(startIndex, stopIndex, prediction)
-    #     raise Exception("Oh no!!!!")
-
 
 def main(argv):
-    if len(argv) != 2:
-        print ("Invalid number of arguments. Expected \"python3 Latte.py foo/bar/baz.lat\"")
-        sys.exit(1)
 
     input_file = argv[1]
 

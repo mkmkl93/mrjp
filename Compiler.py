@@ -1,8 +1,9 @@
 import antlr4
 import sys
-from antlr.LatteLexer import LatteLexer
 from antlr.LatteParser import LatteParser
-from enum import Enum
+
+DEBUG = False
+
 
 def error(ctx, msg) -> None:
     print("\033[91m" + "Compilation error at " + str(ctx.start.line) + ":" + str(ctx.start.column) + "\033[0m")
@@ -10,11 +11,17 @@ def error(ctx, msg) -> None:
     sys.exit(1)
 
 
+def debug(msg) -> None:
+    if DEBUG:
+        sys.stderr.write(msg)
+
+
 class Var:
     def __init__(self, typ=None, value=None, res_type=None):
         self.type = typ
         self.value = value
         self.res_type = res_type
+
 
 def get_default_value(typ):
     if typ == 'int':
@@ -40,10 +47,10 @@ class Compiler:
         self.envs = [{}]
 
     def add_bultin(self) -> None:
-        self.envs[0]['printInt'] = Var('[int]', None, 'void')
-        self.envs[0]['readInt'] = Var('[]', None, 'int')
-        self.envs[0]['printString'] = Var('[string]', None, 'void')
-        self.envs[0]['readString'] = Var('[]', None, 'string')
+        self.envs[0]['printInt'] = Var('int', None, 'void')
+        self.envs[0]['readInt'] = Var('', None, 'int')
+        self.envs[0]['printString'] = Var('string', None, 'void')
+        self.envs[0]['readString'] = Var('', None, 'string')
 
     def enter_program(self, ctx: LatteParser.ProgramContext) -> None:
         self.add_bultin()
@@ -63,7 +70,7 @@ class Compiler:
         args = []
 
         if arguments is None:
-            self.envs[-1][name] = Var('[]', None, typ)
+            self.envs[-1][name] = Var('', None, typ)
             return
 
         for i in range(len(arguments.type_())):
@@ -73,14 +80,30 @@ class Compiler:
         args_str = ' -> '.join(args)
         self.envs[-1][name] = Var(args_str, None, typ)
 
+    def check_for_return_unknown(self, ctx) -> bool:
+        if isinstance(ctx, LatteParser.BlockStmtContext):
+            return self.check_for_return_block(ctx.block())
+        if isinstance(ctx, LatteParser.StmtContext):
+            return self.check_for_return_stmt(ctx)
+
     def check_for_return_stmt(self, ctx: LatteParser.StmtContext) -> bool:
         if isinstance(ctx, (LatteParser.VRetContext, LatteParser.RetContext)):
             return True
         elif isinstance(ctx, LatteParser.CondElseContext):
-            stmt_true = ctx.stmt(0)
-            stmt_false = ctx.stmt(1)
+            stmt1 = ctx.stmt(0)
+            stmt2 = ctx.stmt(1)
 
-            if self.check_for_return_stmt(stmt_true) and self.check_for_return_stmt(stmt_false):
+            if ctx.expr().getText() == 'false':
+                return self.check_for_return_unknown(stmt2)
+
+            if ctx.expr().getText() == 'true':
+                return self.check_for_return_unknown(stmt1)
+
+            return self.check_for_return_unknown(stmt1) and self.check_for_return_unknown(stmt2)
+        elif isinstance(ctx, LatteParser.CondContext) and ctx.expr().getText() == 'true':
+            stmt_true = ctx.stmt()
+
+            if self.check_for_return_block(stmt_true.block()):
                 return True
         return False
 
@@ -101,7 +124,7 @@ class Compiler:
         args = ctx.arg()
         block = ctx.block()
 
-        if not self.check_for_return_block(block):
+        if typ != 'void' and not self.check_for_return_block(block):
             error(ctx, "No return statement in every possible branch")
 
         if args is not None:
@@ -324,9 +347,11 @@ class Compiler:
             self.envs.pop()
 
     def enter_stmt(self, ctx: LatteParser.StmtContext, ret_type):
-        sys.stderr.write(ctx.getText() + "\n")
+        debug(ctx.getText() + "\n")
         if isinstance(ctx, LatteParser.BlockStmtContext):
+            self.envs.append({})
             self.enter_block(ctx.block(), ret_type)
+            self.envs.pop()
         elif isinstance(ctx, LatteParser.DeclContext):
             self.enter_decl(ctx)
         elif isinstance(ctx, LatteParser.AssContext):
