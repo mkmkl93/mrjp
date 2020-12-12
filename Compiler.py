@@ -202,7 +202,8 @@ class Compiler:
             else:
                 item_expr_var = self.enter_expr(item_expr)
 
-                if item_expr_var.type == 'int' and (not -2147483648 <= int(item_expr_var.value) <= 2147483647):
+                if item_expr_var.type == 'int' and item_expr_var.value is not None and\
+                        (not -2147483648 <= int(item_expr_var.value) <= 2147483647):
                     self.error(ctx, 'Number too large')
 
                 if var_type != item_expr_var.type:

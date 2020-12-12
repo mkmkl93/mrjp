@@ -1,0 +1,3 @@
+Standardowe rozwiązanie z użyciem ANTLR4 na podstawie pythona. 'make' tworzy plik wykonywalny 'latc_ARCH' i za każdym
+razem tworzy nowe środowisko bo nie potrafiłem tego naprawić w Makefilu a to nie jest trudnośc tego zadania i nie jest
+to niezgodne z treścią. Przygotowałem od razy mój skrypt do testowania zeby pokazać jak ja z tego korzystałem.

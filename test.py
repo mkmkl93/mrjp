@@ -23,8 +23,8 @@ def check_good():
                 print("\033[92m" + file + "\033[0m")
             else:
                 print("\033[91m" + file + "\033[0m")
-                print(process.stdout.decode("utf-8") )
-                print(process.stderr.decode("utf-8") )
+                print(process.stdout.decode("utf-8"))
+                print(process.stderr.decode("utf-8"))
 
 
 def check_bad():
@@ -36,6 +36,7 @@ def check_bad():
             if process.returncode == 0:
                 good = True
 
+            # print(process.stdout.decode("utf-8"))
             if good:
                 print("\033[91m" + file + "\033[0m")
             else:
