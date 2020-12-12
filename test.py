@@ -14,9 +14,9 @@ def check_good():
     for file in os.listdir(dir_path + 'good/'):
         if file.endswith('.lat'):
             good = True
-            process = subprocess.run(['python3', 'Latte.py', dir_path + 'good/' + file], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
-            if process.stdout != b'' or process.stderr != b'' or process.returncode != 0:
+            process = subprocess.run(['./latc_ARCH', dir_path + 'good/' + file], stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, shell=False)
+            if process.stdout != b'' or process.stderr != b'OK\n' or process.returncode != 0:
                 good = False
 
             if good:
@@ -31,8 +31,8 @@ def check_bad():
     for file in os.listdir(dir_path + 'bad/'):
         if file.endswith('.lat'):
             good = False
-            process = subprocess.run(['python3', 'Latte.py', dir_path + 'bad/' + file], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
+            process = subprocess.run(['./latc_ARCH', dir_path + 'bad/' + file], stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, shell=False)
             if process.returncode == 0:
                 good = True
 
@@ -54,8 +54,8 @@ def check_specific(choice, number):
     process = subprocess.run(['cat', dir_path + ''.join(s)], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
     print(process.stdout.decode("utf-8"))
-    process = subprocess.run(['python3', 'Latte.py', dir_path + ''.join(s)], stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+    process = subprocess.run(['./latc_ARCH', dir_path + ''.join(s)], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, shell=False)
     print(process.stdout.decode("utf-8"))
     print(process.stderr.decode("utf-8"))
 

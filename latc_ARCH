@@ -1,0 +1,4 @@
+#!/bin/bash
+
+source my_env/bin/activate
+./my_env/bin/python3 Latte.py $1

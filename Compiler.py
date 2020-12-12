@@ -35,13 +35,13 @@ class Compiler:
         self.DEBUG = DEBUG
 
     def error(self, ctx: antlr4.ParserRuleContext, msg) -> None:
-        print("\033[91m" + "Compilation error at " + str(ctx.start.line) + ":" + str(ctx.start.column) + "\033[0m")
-        print(msg)
+        sys.stderr.write("ERROR\n")
+        sys.stderr.write("\033[91m" + "Compilation error at " + str(ctx.start.line) + ":" + str(ctx.start.column) + "\033[0m\m")
+        sys.stderr.write(msg + '\n')
         with open(self.file) as fp:
             for i, line in enumerate(fp):
                 if ctx.start.line <= i + 1 <= ctx.stop.line:
-                    print("\033[94m" + line + "\033[0m", end='')
-        print()
+                    sys.stderr.write("\033[94m" + line + "\033[0m")
         sys.exit(1)
 
     def debug(self, msg) -> None:

@@ -17,9 +17,10 @@ class MyErrorListener(ErrorListener):
         super(MyErrorListener, self).__init__()
 
     def syntaxError(self, recognizer, offending_symbol, line, column, msg, e):
-        print("\033[91m" + "Syntax error at " + str(line) + ":" + str(column) + "\033[0m")
-        print(offending_symbol.text)
-        print(msg)
+        sys.stderr.write("ERROR\n")
+        sys.stderr.write("\033[91m" + "Syntax error at " + str(line) + ":" + str(column) + "\033[0m\n")
+        sys.stderr.write(offending_symbol.text + '\n')
+        sys.stderr.write(msg + '\n')
         sys.exit(1)
 
 
@@ -43,6 +44,8 @@ def main(argv):
 
     compiler.enter_program(prog_tree)
 
+    sys.stderr.write('OK\n')
+    sys.exit(0)
 
 if __name__ == '__main__':
     main(sys.argv)
