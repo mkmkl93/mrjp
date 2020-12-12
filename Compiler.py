@@ -2,20 +2,6 @@ import antlr4
 import sys
 from antlr.LatteParser import LatteParser
 
-DEBUG = False
-
-
-def error(ctx, msg) -> None:
-    print("\033[91m" + "Compilation error at " + str(ctx.start.line) + ":" + str(ctx.start.column) + "\033[0m")
-    print(msg)
-    sys.exit(1)
-
-
-def debug(msg) -> None:
-    if DEBUG:
-        sys.stderr.write(msg)
-
-
 class Var:
     def __init__(self, typ=None, value=None, res_type=None):
         self.type = typ
@@ -43,8 +29,24 @@ def get_from_item(item: LatteParser.ItemContext, default_value: str, typ: str):
 
 
 class Compiler:
-    def __init__(self):
+    def __init__(self, file, DEBUG):
         self.envs = [{}]
+        self.file = file
+        self.DEBUG = DEBUG
+
+    def error(self, ctx: antlr4.ParserRuleContext, msg) -> None:
+        print("\033[91m" + "Compilation error at " + str(ctx.start.line) + ":" + str(ctx.start.column) + "\033[0m")
+        print(msg)
+        with open(self.file) as fp:
+            for i, line in enumerate(fp):
+                if ctx.start.line <= i + 1 <= ctx.stop.line:
+                    print("\033[94m" + line + "\033[0m", end='')
+        print()
+        sys.exit(1)
+
+    def debug(self, msg) -> None:
+        if self.DEBUG == True:
+            sys.stderr.write(msg)
 
     def add_bultin(self) -> None:
         self.envs[0]['printInt'] = Var('int', None, 'void')
@@ -66,7 +68,7 @@ class Compiler:
     def add_definition(self, ctx: LatteParser.TopDefContext) -> None:
         typ = ctx.type_().getText()
         name = ctx.ID().getText()
-        arguments: LatteParser.DeclContext = ctx.arg()
+        arguments: LatteParser.ArgContext = ctx.arg()
         args = []
 
         if arguments is None:
@@ -103,7 +105,7 @@ class Compiler:
         elif isinstance(ctx, LatteParser.CondContext) and ctx.expr().getText() == 'true':
             stmt_true = ctx.stmt()
 
-            if self.check_for_return_block(stmt_true.block()):
+            if self.check_for_return_unknown(stmt_true):
                 return True
         return False
 
@@ -113,19 +115,18 @@ class Compiler:
                 continue
             elif isinstance(stmt, LatteParser.StmtContext):
                 if self.check_for_return_stmt(stmt):
-                    return True;
+                    return True
 
         return False
 
     def enter_top_def(self, ctx: LatteParser.TopDefContext) -> None:
         self.envs.append({})
         typ = ctx.type_().getText()
-        name = ctx.ID().getText()
         args = ctx.arg()
         block = ctx.block()
 
         if typ != 'void' and not self.check_for_return_block(block):
-            error(ctx, "No return statement in every possible branch")
+            self.error(ctx, "No return statement in every possible branch")
 
         if args is not None:
             for i in range(len(args.type_())):
@@ -134,7 +135,7 @@ class Compiler:
                 arg_val = get_default_value(arg_typ)
 
                 if arg_name in self.envs[-1]:
-                    error(ctx, "Repeated argument name")
+                    self.error(ctx, "Repeated argument name: " + arg_name)
 
                 self.envs[-1][arg_name] = Var(arg_typ, arg_val)
 
@@ -148,16 +149,16 @@ class Compiler:
             elif isinstance(stmt, LatteParser.StmtContext):
                 self.enter_stmt(stmt, ret_type)
             else:
-                error(ctx, "Unresolved instance in enter_block stmt")
+                self.error(ctx, "Unresolved instance in enter_block stmt")
 
     def enter_ret(self, ctx: LatteParser.RetContext, ret_type) -> None:
         val = self.enter_expr(ctx.expr())
         if val.type != ret_type:
-            error(ctx, "Returning wrong type")
+            self.error(ctx, "Returning wrong type\nExpected " + ret_type + " got " + val.type)
 
     def enter_vret(self, ctx: LatteParser.VRetContext, ret_type) -> None:
         if ret_type != "void":
-            error(ctx, "Returning wrong type")
+            self.error(ctx, "Returning wrong type\nExpected " + ret_type + " got void")
 
     def enter_decl(self, ctx: LatteParser.DeclContext):
         var_type = ctx.type_().getText()
@@ -169,15 +170,15 @@ class Compiler:
             item_expr = var_item.expr()
 
             if var_name in self.envs[-1]:
-                error(ctx, "Variable already declared: " + var_name)
+                self.error(ctx, "Variable already declared: " + var_name)
 
             if item_expr is None:
                 self.envs[-1][var_name] = Var(var_type, default_value)
             else:
                 item_expr_var = self.enter_expr(item_expr)
 
-                if item_expr_var.type != var_type:
-                    error(ctx, "Mismatch in types")
+                if var_type != item_expr_var.type:
+                    self.error(ctx, "Mismatch in types\nExpected " + var_type + " got " + item_expr_var.type)
 
                 var_value = default_value if item_expr is None else item_expr.getText()
 
@@ -189,7 +190,7 @@ class Compiler:
             var_exp = self.enter_expr(exp)
 
             if var_exp.type not in ["boolean", "int"]:
-                error(ctx, "Mismatch in types in unary operator")
+                self.error(ctx, "Mismatch in types in unary operator")
 
             return Var(var_exp.type)
         elif isinstance(ctx, LatteParser.EMulOpContext):
@@ -197,7 +198,7 @@ class Compiler:
 
             for exp in val_exps:
                 if exp.type != "int":
-                    error(ctx, "Multiplied elements aren't all integers")
+                    self.error(ctx, "Multiplied elements aren't all integers")
 
             return Var('int')
         elif isinstance(ctx, LatteParser.EAddOpContext):
@@ -208,7 +209,7 @@ class Compiler:
                 if typ is None and exp.type in ["int", "string"]:
                     typ = exp.type
                 elif exp.type != typ:
-                    error(ctx, "Not all elements are of the same type")
+                    self.error(ctx, "Not all elements are of the same type")
 
             return Var(typ)
         elif isinstance(ctx, LatteParser.ERelOpContext):
@@ -218,7 +219,7 @@ class Compiler:
             var_right = self.enter_expr(right)
 
             if var_left.type != var_right.type or var_left.type not in ["int", "boolean"]:
-                error(ctx, "Mismatch in types in comparison")
+                self.error(ctx, "Mismatch in types of comparison")
 
             return Var('boolean')
         elif isinstance(ctx, LatteParser.EAndContext):
@@ -228,7 +229,7 @@ class Compiler:
             var_right = self.enter_expr(right)
 
             if var_left.type != var_right.type and var_left.type != 'boolean':
-                error(ctx, "Mismatch in types in comparison")
+                self.error(ctx, "Mismatch in types of comparison")
 
             return Var('boolean')
         elif isinstance(ctx, LatteParser.EOrContext):
@@ -238,7 +239,7 @@ class Compiler:
             var_right = self.enter_expr(right)
 
             if var_left.type != var_right.type and var_left.type != 'boolean':
-                error(ctx, "Mismatch in types in comparison")
+                self.error(ctx, "Mismatch in types of comparison")
 
             return Var('boolean')
         elif isinstance(ctx, LatteParser.EIdContext):
@@ -246,7 +247,7 @@ class Compiler:
             for env in self.envs[::-1]:
                 if var_name in env:
                     return env[var_name]
-            error(ctx, "Element doesn't exist")
+            self.error(ctx, "Element doesn't exist")
         elif isinstance(ctx, LatteParser.EIntContext):
             return Var('int', ctx.INT().getText())
         elif isinstance(ctx, LatteParser.ETrueContext):
@@ -267,7 +268,7 @@ class Compiler:
                         break
 
             if fun is None:
-                error(ctx, "Not found function with given types of attributes")
+                self.error(ctx, "Not found function with given types of attributes")
             else:
                 return Var(fun.res_type)
         elif isinstance(ctx, LatteParser.EStrContext):
@@ -275,14 +276,14 @@ class Compiler:
         elif isinstance(ctx, LatteParser.EParenContext):
             return self.enter_expr(ctx.expr())
         else:
-            error(ctx, "Unresolved instance in enter_expr")
+            self.error(ctx, "Unresolved instance in enter_expr")
 
     def enter_while(self, ctx: LatteParser.WhileContext, ret_type) -> None:
         condition = ctx.expr()
         condition_var = self.enter_expr(condition)
 
         if condition_var.type != 'boolean':
-            error(ctx, "Condition doesn't have type boolean")
+            self.error(ctx, "Condition doesn't have type boolean")
 
         self.envs.append({})
         self.enter_stmt(ctx.stmt(), ret_type)
@@ -297,11 +298,11 @@ class Compiler:
         for env in self.envs[::-1]:
             if var_name in env:
                 if env[var_name].type != val_exp.type:
-                    error(ctx, "Incorrect type of assignment")
+                    self.error(ctx, "Incorrect type of assignment\nExpected " + env[var_name].type + " got " + val_exp.type)
                 else:
                     return
 
-        error(ctx, "Variable not declared: " + var_name)
+        self.error(ctx, "Variable not declared: " + var_name)
 
     def enter_incr(self, ctx: LatteParser.IncrContext) -> None:
         var_name = ctx.ID().getText()
@@ -309,7 +310,7 @@ class Compiler:
         for env in self.envs[::-1]:
             if var_name in env:
                 if env[var_name].type != 'int':
-                    error(ctx, "Incorrect type")
+                    self.error(ctx, "Incorrect type\nExpected " + env[var_name].type + " got int")
                 else:
                     return
 
@@ -319,7 +320,7 @@ class Compiler:
         for env in self.envs[::-1]:
             if var_name in env:
                 if env[var_name].type != 'int':
-                    error(ctx, "Incorrect type")
+                    self.error(ctx, "Incorrect type\nExpected " + env[var_name].type + " got int")
                 else:
                     return
 
@@ -328,18 +329,18 @@ class Compiler:
         exp_val = self.enter_expr(exp)
 
         if exp_val.type != "boolean":
-            error(ctx, "Expression isn't of type boolean")
+            self.error(ctx, "Expression isn't of type boolean")
 
         self.envs.append({})
         self.enter_stmt(ctx.stmt(), ret_type)
         self.envs.pop()
 
     def enter_cond_else(self, ctx: LatteParser.CondElseContext, ret_type) -> None:
-        exp = ctx.expr();
+        exp = ctx.expr()
         exp_val = self.enter_expr(exp)
 
         if exp_val.type != "boolean":
-            error(ctx, "Expression isn't of type boolean")
+            self.error(ctx, "Expression isn't of type boolean")
 
         for i in range(2):
             self.envs.append({})
@@ -347,7 +348,7 @@ class Compiler:
             self.envs.pop()
 
     def enter_stmt(self, ctx: LatteParser.StmtContext, ret_type):
-        debug(ctx.getText() + "\n")
+        self.debug(ctx.getText() + "\n")
         if isinstance(ctx, LatteParser.BlockStmtContext):
             self.envs.append({})
             self.enter_block(ctx.block(), ret_type)
@@ -373,10 +374,4 @@ class Compiler:
         elif isinstance(ctx, LatteParser.SExpContext):
             self.enter_expr(ctx.expr())
         else:
-            error(ctx, "Unresolved instance in enter_block StmtContext")
-
-
-
-
-
-
+            self.error(ctx, "Unresolved instance in enter_block StmtContext")

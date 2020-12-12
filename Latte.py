@@ -10,20 +10,20 @@ from antlr4.error.ErrorListener import ErrorListener
 
 flags.DEFINE_boolean('debug', False, 'Turn on debug comments')
 FLAGS = flags.FLAGS
-Compiler.DEBUG = FLAGS['debug']
+
 
 class MyErrorListener(ErrorListener):
     def __init__(self):
         super(MyErrorListener, self).__init__()
 
-    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+    def syntaxError(self, recognizer, offending_symbol, line, column, msg, e):
         print("\033[91m" + "Syntax error at " + str(line) + ":" + str(column) + "\033[0m")
+        print(offending_symbol.text)
         print(msg)
         sys.exit(1)
 
 
 def main(argv):
-
     input_file = argv[1]
 
     input_file_stream = antlr4.FileStream(input_file)
@@ -39,7 +39,7 @@ def main(argv):
     parser.removeErrorListeners()
     parser.addErrorListener(my_error_listener)
     prog_tree = parser.program()
-    compiler = Compiler()
+    compiler = Compiler(input_file, FLAGS['debug'])
 
     compiler.enter_program(prog_tree)
 
