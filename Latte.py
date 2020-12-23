@@ -2,14 +2,16 @@
 
 import sys
 import antlr4
-from absl import flags
-from Compiler import Compiler
+from absl import app, flags
+from FrontEnd import FrontEnd
+from Code4 import Code4
+from Machine import Machine
 from antlr.LatteLexer import LatteLexer
 from antlr.LatteParser import LatteParser
 from antlr4.error.ErrorListener import ErrorListener
 
-flags.DEFINE_boolean('debug', False, 'Turn on debug comments')
 FLAGS = flags.FLAGS
+flags.DEFINE_boolean('debug', False, 'Turn on debug comments')
 
 
 class MyErrorListener(ErrorListener):
@@ -40,12 +42,22 @@ def main(argv):
     parser.removeErrorListeners()
     parser.addErrorListener(my_error_listener)
     prog_tree = parser.program()
-    compiler = Compiler(input_file, FLAGS['debug'])
+    compiler = FrontEnd(input_file, FLAGS['debug'])
+    code4 = Code4(FLAGS['debug'])
+    machine = Machine(FLAGS['debug'])
 
     compiler.enter_program(prog_tree)
+    code4.enter_program(prog_tree)
+    for i in code4.code:
+        print(i)
+    print()
+    machine.translate(code4.code)
+    for i in machine.code:
+        print(i)
 
     sys.stderr.write('OK\n')
     sys.exit(0)
 
+
 if __name__ == '__main__':
-    main(sys.argv)
+    app.run(main)

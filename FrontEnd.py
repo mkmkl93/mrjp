@@ -1,34 +1,10 @@
 import antlr4
 import sys
 from antlr.LatteParser import LatteParser
-
-class Var:
-    def __init__(self, typ=None, value=None, res_type=None):
-        self.type = typ
-        self.value = value
-        self.res_type = res_type
+from utils import Var, get_default_value, get_from_item
 
 
-def get_default_value(typ):
-    if typ == 'int':
-        return '0'
-
-    if typ == 'string':
-        return ''
-
-    if typ == 'boolean':
-        return 'false'
-
-    return None
-
-
-def get_from_item(item: LatteParser.ItemContext, default_value: str, typ: str):
-    value = item.expr()
-
-    return Var(typ, default_value if value is None else value.getText())
-
-
-class Compiler:
+class FrontEnd:
     def __init__(self, file, DEBUG):
         self.envs = [{}]
         self.file = file
@@ -62,8 +38,8 @@ class Compiler:
             if isinstance(topDef, LatteParser.TopDefContext):
                 self.add_definition(topDef)
 
-        if 'main' not in self.envs[-1]:
-            self.error(ctx, 'No main declared')
+        if 'main' not in self.envs[-1] or self.envs[-1]['main'].res_type != 'int':
+            self.error(ctx, 'No int main declared')
 
         for topDef in ctx.children:
             if isinstance(topDef, LatteParser.TopDefContext):
@@ -218,7 +194,8 @@ class Compiler:
             exp = ctx.expr()
             var_exp = self.enter_expr(exp)
 
-            if var_exp.type not in ["boolean", "int"]:
+            if ctx.children[0] == '-' and var_exp.type != "int" or \
+                    ctx.children[0] == '!' and var_exp.type != "boolean":
                 self.error(ctx, "Mismatch in types in unary operator")
 
             return Var(var_exp.type)
@@ -424,3 +401,4 @@ class Compiler:
             return
         else:
             self.error(ctx, "Unresolved instance in enter_block StmtContext")
+
