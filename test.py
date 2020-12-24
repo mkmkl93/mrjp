@@ -52,13 +52,30 @@ def check_specific(choice, number):
     s[-5] = str(number % 10)
     s[-6] = str((number // 10) % 10)
     s[-7] = str((number // 100) % 10)
-    process = subprocess.run(['cat', dir_path + ''.join(s)], stdout=subprocess.PIPE,
+    basename = ''.join(s)[:-4]
+    process = subprocess.run(['cat', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
     print(process.stdout.decode("utf-8"))
-    process = subprocess.run(['./latc_ARCH', dir_path + ''.join(s)], stdout=subprocess.PIPE,
+    process = subprocess.run(['./latc_ARCH', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, shell=False)
-    print(process.stdout.decode("utf-8"))
-    print(process.stderr.decode("utf-8"))
+    print('stdout: \n' + process.stdout.decode("utf-8"))
+    print('stderr: ' + process.stderr.decode("utf-8"))
+
+    process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, shell=False)
+    print('stdout: ' + process.stdout.decode("utf-8"))
+    print('stderr: ' + process.stderr.decode("utf-8"))
+    print('return code:' + str(process.returncode))
+
+    with open(dir_path + basename + '.output') as file:
+        file_content = ''.join([x for x in file])
+        process_output = str(process.stdout.decode('utf-8'))
+
+        if file_content != process_output or process.returncode != 0:
+            print("\033[91m" + basename + "\033[0m")
+        else:
+            print("\033[92m" + basename + "\033[0m")
+
 
 def main(argv):
     if len(argv) == 1:

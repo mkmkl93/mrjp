@@ -2,6 +2,8 @@
 
 import sys
 import antlr4
+import os
+import subprocess
 from absl import app, flags
 from FrontEnd import FrontEnd
 from Code4 import Code4
@@ -47,13 +49,27 @@ def main(argv):
     machine = Machine(FLAGS['debug'])
 
     compiler.enter_program(prog_tree)
+
     code4.enter_program(prog_tree)
     for i in code4.code:
         print(i)
     print()
+
     machine.translate(code4.code)
     for i in machine.code:
         print(i)
+
+    output_file_base = os.path.splitext(input_file)[0]
+    output_file = output_file_base + '.s'
+    with open(output_file, 'w') as output:
+        for line in machine.code:
+            output.write(line + '\n')
+
+    process = subprocess.run(['gcc', '-g', '-static', '-nostdlib', '-no-pie', '-emain', 'lib/runtime.s', output_file,
+                             '-o' + output_file_base], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+
+    print(process.stdout.decode("utf-8"))
+    print(process.stderr.decode("utf-8"))
 
     sys.stderr.write('OK\n')
     sys.exit(0)

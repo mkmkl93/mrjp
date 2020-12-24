@@ -30,6 +30,26 @@ class Machine:
         if self.DEBUG:
             sys.stderr.write(msg)
 
+    def to_reg_or_con(self, var: str) -> str:
+        if var in registers:
+            return '%' + var
+        elif var.isnumeric():
+            return '$' + var
+        else:
+            var = self.to_any(var)
+            self.code.append('    mov {}, %eax'.format(var))
+            return '%eax'
+
+    def to_any(self, var: str) -> str:
+        if var not in registers and not var.isnumeric():
+            return '-' + str(self.blocks[-1].vars[var]) + '(%rbp)'
+        elif var in registers:
+            return '%' + var
+        elif var.isnumeric():
+            return '$' + var
+        else:
+            self.debug("Not handled to_any " + var + '\n')
+
     def translate(self, code) -> None:
         self.add_start()
 
@@ -42,27 +62,29 @@ class Machine:
         for i in range(len(stops) - 1):
             start = stops[i]
             end = stops[i + 1]
-            self.translate_block(code[start : end])
+            self.translate_block(code[start: end], code[start].startswith('main'))
+
+        self.code.append('')
 
     def add_start(self):
         self.code.append('    .global main')
         self.code.append('    .text')
         self.code.append('')
 
-    def translate_block(self, code):
+    def translate_block(self, code, is_main):
         if code[0][-2] == ':':
             self.code.append(code[0][:-1])
         else:
             self.code.append(code[0])
 
-        self.code.append('    push rbp')
-        self.code.append('    mv rbp rsp')
+        self.code.append('    push %rbp')
+        self.code.append('    mov %rsp, %rbp')
 
         self.blocks.append(Block())
         self.add_variables(code)
 
         for line in code[1:]:
-            self.add_line(line)
+            self.add_line(line, is_main)
 
         self.code.append('')
 
@@ -76,36 +98,73 @@ class Machine:
                 self.blocks[-1].vars[m.group(1)] = offset
                 offset += 4
 
-    def add_line(self, line):
+    def add_line(self, line, is_main):
         if re.match(r'(.*) = (.*)', line):
             m = re.match(r'(.*) = (.*)', line)
             dest = m.group(1)
             source = m.group(2)
 
             self.add_mov(dest, source)
-        elif line.startswith(('push', 'call', 'ret')):
+        elif line.startswith('mul'):
+            m = re.match(r'mul (.*) (.*)', line)
+            dest = m.group(1)
+            source = m.group(2)
+
+            self.add_mul(dest, source)
+        elif line.startswith('call'):
             self.code.append('    ' + line)
+        elif not is_main and line.startswith('ret'):
+            self.code.append('    ' + line)
+        elif is_main and line.startswith('ret'):
+            self.code.append('    mov %eax, %edi')
+            self.code.append('    mov $60, %eax')
+            self.code.append('    syscall')
+        elif line.startswith('push'):
+            m = re.match(r'push (.*)', line)
+
+            self.code.append('    push %' + m.group(1))
+        elif line.startswith('neg'):
+            m = re.match(r'neg (.*)', line)
+
+            self.add_neg(m.group(1))
         elif line == '':
             return
         else:
             self.debug("Not handled " + line + '\n')
 
     def add_mov(self, dest, source):
-        if dest not in registers:
-            dest = '[rbp - ' + str(self.blocks[-1].vars[dest]) + ']'
-        if source not in registers and not source.isnumeric():
-            source = '[rbp - ' + str(self.blocks[-1].vars[source]) + ']'
-
         if dest not in registers and source not in registers:
-            self.code.append('    mv rax, ' + source)
-            source = 'rax'
+            source = self.to_reg_or_con(source)
+        else:
+            source = self.to_any(source)
 
-        self.code.append('    mov ' + dest + ', ' + source)
+        dest = self.to_any(dest)
+
+        if source.startswith('$') and dest[0] != '%':
+            op = 'movl'
+        else:
+            op = 'mov'
+
+        self.code.append('    {} {}, {}'.format(op, source, dest))
 
     def add_ret(self, source):
-        if source not in registers and not source.isnumeric():
-            source = '[rbp - ' + str(self.blocks[-1].vars[source]) + ']'
+        self.code.append('    ret')
 
+    def add_neg(self, source):
+        source = self.to_any(source)
+
+        if source.startswith('%'):
+            op = 'neg'
+        else:
+            op = 'negl'
+
+        self.code.append('    {} {}'.format(op, source))
+
+    def add_mul(self, mul1, mul2):
+        mul1 = self.to_any(mul1)
+        mul2 = self.to_reg_or_con(mul2)
+
+        self.code.append('    imul {}, {}'.format(mul1, mul2))
 
 
 

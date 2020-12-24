@@ -18,6 +18,3 @@ ifeq (test,$(firstword $(MAKECMDGOALS)))
 endif
 test:
 	python3 test.py $(RUN_ARGS)
-
-kek:
-	gcc -static -nostdlib -no-pie printInt.s  hello.s -o hello

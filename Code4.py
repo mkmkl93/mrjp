@@ -62,7 +62,7 @@ class Code4:
         val, tmp = self.enter_expr(ctx.expr(), name, counter)
         counter = tmp
 
-        self.code.append('rax = ' + val.loc)
+        self.code.append('eax = ' + val.loc)
         self.code.append('ret')
 
         return counter
@@ -123,7 +123,7 @@ class Code4:
 
             var_name = name + '_t{}'.format(counter)
             self.code.append('mul ' + val_exps[0].loc + ' ' + val_exps[1].loc)
-            self.code.append(var_name + ' = rax')
+            self.code.append(var_name + ' = eax')
             counter += 1
 
             return Var('int', loc=var_name), counter
@@ -216,7 +216,7 @@ class Code4:
             var_name = name + '_t{}'.format(counter)
 
             if fun.res_type != 'void':
-                self.code.append(var_name + ' = rax')
+                self.code.append(var_name + ' = eax')
             counter += 1
 
             return Var(fun.res_type), counter

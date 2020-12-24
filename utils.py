@@ -1,6 +1,6 @@
 from antlr.LatteParser import LatteParser
 
-registers = ['rdi', 'rsi', 'rdx', 'rcx', 'r8', 'r9']
+registers = ['rdi', 'rsi', 'rdx', 'rcx', 'r8', 'r9', 'eax']
 
 class Var:
     def __init__(self, typ=None, value=None, res_type=None, loc=None):
