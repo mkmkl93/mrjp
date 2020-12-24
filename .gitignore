@@ -1,0 +1,14 @@
+lattests/*/*
+!lattests/*/*.output
+!lattests/*/*.lat
+.antlr/
+.idea/
+LICENCE
+__pycache__/
+antlr/
+lattests201003
+lattests201003.tgz
+mk394332.tar.gz
+mk394332/
+mrjp-tests-master/
+my_env/
