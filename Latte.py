@@ -65,6 +65,7 @@ def main(argv):
         for line in machine.code:
             output.write(line + '\n')
 
+    #'gcc -g -static -nostdlib -no-pie -e main lib/runtime.s lattests/good/core011.s -o lattests/good/core011 && ./lattests/good/core011'
     process = subprocess.run(['gcc', '-g', '-static', '-nostdlib', '-no-pie', '-emain', 'lib/runtime.s', output_file,
                              '-o' + output_file_base], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
 

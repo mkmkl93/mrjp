@@ -138,9 +138,15 @@ class FrontEnd:
         self.envs.pop()
 
     def enter_block(self, ctx: LatteParser.BlockContext, ret_type) -> None:
-        for stmt in ctx.children:
+        for i, stmt in enumerate(ctx.children):
             if isinstance(stmt, antlr4.TerminalNode):
                 continue
+            elif isinstance(stmt, LatteParser.CondContext):
+                if stmt.expr().getText() == 'true':
+                    ctx.children[i] = stmt.stmt()
+                    self.enter_stmt(stmt.stmt(), ret_type)
+                elif stmt.expr().getText() == 'false':
+                    ctx.children[i] = LatteParser.EmptyContext()
             elif isinstance(stmt, LatteParser.StmtContext):
                 self.enter_stmt(stmt, ret_type)
             else:

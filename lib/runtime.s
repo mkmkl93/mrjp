@@ -6,7 +6,7 @@ printInt:
     lea   -1(%rsp), %rsi        # We use the 128B red-zone as a buffer to hold the string
                                 # a 64-bit integer is at most 20 digits long in base 10, so it fits.
 
-    cmp     $0, %rdi            # Check if argument is negative
+    cmp     $0, %edi            # Check if argument is negative
     jge     .neg_false
 .neg_true:
     mov     $1, %r9             # Remember than argument was less than zero

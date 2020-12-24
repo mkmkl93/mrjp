@@ -86,7 +86,15 @@ class Machine:
         for line in code[1:]:
             self.add_line(line, is_main)
 
+        if not is_main:
+            self.add_epilog()
+
         self.code.append('')
+
+    def add_epilog(self):
+        self.code.append('    mov %rbp, %rsp')
+        self.code.append('    pop %rbp')
+        self.code.append('    ret')
 
     def add_variables(self, code):
         offset = 4
@@ -99,7 +107,10 @@ class Machine:
                 offset += 4
 
     def add_line(self, line, is_main):
-        if re.match(r'(.*) = (.*)', line):
+        if line.endswith(':'):
+            self.code.append('')
+            self.code.append(line)
+        elif re.match(r'(.*) = (.*)', line):
             m = re.match(r'(.*) = (.*)', line)
             dest = m.group(1)
             source = m.group(2)
