@@ -62,7 +62,7 @@ class Machine:
         for i in range(len(stops) - 1):
             start = stops[i]
             end = stops[i + 1]
-            self.translate_block(code[start: end], code[start].startswith('main'))
+            self.translate_block(code[start: end])
 
         self.code.append('')
 
@@ -71,7 +71,7 @@ class Machine:
         self.code.append('    .text')
         self.code.append('')
 
-    def translate_block(self, code, is_main):
+    def translate_block(self, code):
         if code[0][-2] == ':':
             self.code.append(code[0][:-1])
         else:
@@ -84,10 +84,7 @@ class Machine:
         self.add_variables(code)
 
         for line in code[1:]:
-            self.add_line(line, is_main)
-
-        if not is_main:
-            self.add_epilog()
+            self.add_line(line)
 
         self.code.append('')
 
@@ -106,7 +103,7 @@ class Machine:
                 self.blocks[-1].vars[m.group(1)] = offset
                 offset += 4
 
-    def add_line(self, line, is_main):
+    def add_line(self, line):
         if line.endswith(':'):
             self.code.append('')
             self.code.append(line)
@@ -116,20 +113,17 @@ class Machine:
             source = m.group(2)
 
             self.add_mov(dest, source)
-        elif line.startswith('mul'):
-            m = re.match(r'mul (.*) (.*)', line)
-            dest = m.group(1)
+        elif line.startswith(('mul', 'div')):
+            m = re.match(r'(.*) (.*) (.*)', line)
+            op = m.group(1)
+            dest = m.group(2)
             source = m.group(2)
 
-            self.add_mul(dest, source)
+            self.add_mul(op, dest, source)
         elif line.startswith('call'):
             self.code.append('    ' + line)
-        elif not is_main and line.startswith('ret'):
-            self.code.append('    ' + line)
-        elif is_main and line.startswith('ret'):
-            self.code.append('    mov %eax, %edi')
-            self.code.append('    mov $60, %eax')
-            self.code.append('    syscall')
+        elif line.startswith('ret'):
+            self.add_epilog()
         elif line.startswith('push'):
             m = re.match(r'push (.*)', line)
 
@@ -171,11 +165,11 @@ class Machine:
 
         self.code.append('    {} {}'.format(op, source))
 
-    def add_mul(self, mul1, mul2):
+    def add_mul(self, op, mul1, mul2):
         mul1 = self.to_any(mul1)
         mul2 = self.to_reg_or_con(mul2)
 
-        self.code.append('    imul {}, {}'.format(mul1, mul2))
+        self.code.append('    i{} {}, {}'.format(op, mul1, mul2))
 
 
 

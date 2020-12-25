@@ -16,5 +16,9 @@ ifeq (test,$(firstword $(MAKECMDGOALS)))
   RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
   $(eval $(RUN_ARGS):;@:)
 endif
+
+lib:
+	clang -S lib/runtime.c -o lib/runtime.s
+
 test:
 	python3 test.py $(RUN_ARGS)

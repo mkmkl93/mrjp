@@ -1,7 +1,7 @@
 /* division */
 
 int main() {
-  { printInt(-42 / -1); }
+  { printInt(-42 / 2); }
   return 0 ;
 
 }

@@ -65,9 +65,12 @@ def main(argv):
         for line in machine.code:
             output.write(line + '\n')
 
-    #'gcc -g -static -nostdlib -no-pie -e main lib/runtime.s lattests/good/core011.s -o lattests/good/core011 && ./lattests/good/core011'
-    process = subprocess.run(['gcc', '-g', '-static', '-nostdlib', '-no-pie', '-emain', 'lib/runtime.s', output_file,
+    # #'clang -g lib/runtime.s lattests/good/core052.s -o lattests/good/core052 && ./lattests/good/core052'
+    process = subprocess.run(['clang', '-g', 'lib/runtime.c', output_file,
                              '-o' + output_file_base], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+
+    # process = subprocess.run(['gcc', '-g', '-static', '-nostdlib', '-no-pie', '-emain', 'lib/runtime.s', output_file,
+    #                           '-o' + output_file_base], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
 
     print(process.stdout.decode("utf-8"))
     print(process.stderr.decode("utf-8"))

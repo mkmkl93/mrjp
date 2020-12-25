@@ -111,6 +111,14 @@ class FrontEnd:
 
         return False
 
+    def add_ret_to_block(self, ctx: LatteParser.BlockStmtContext):
+        if isinstance(ctx.children[-1], LatteParser.BlockStmtContext):
+            self.add_ret_to_block(ctx.children[-1])
+        else:
+            tmp = ctx.children[-1]
+            ctx.children[-1] = LatteParser.VRetContext(ctx.parser, ctx)
+            ctx.children.append(tmp)
+
     def enter_top_def(self, ctx: LatteParser.TopDefContext) -> None:
         self.envs.append({})
         typ = ctx.type_().getText()
@@ -119,6 +127,8 @@ class FrontEnd:
 
         if typ != 'void' and not self.check_for_return_block(block):
             self.error(ctx, "No return statement in every possible branch")
+        elif typ == 'void' and not self.check_for_return_block(block):
+            self.add_ret_to_block(ctx.block())
 
         if args is not None:
             for i in range(len(args.type_())):

@@ -91,10 +91,12 @@ class Code4:
 
         return counter
 
-    # def enter_vret(self, ctx: LatteParser.VRetContext, ret_type) -> None:
-    #     if ret_type != "void":
-    #         self.error(ctx, "Returning wrong type\nExpected " + ret_type + " got void")
-    #
+    def enter_vret(self, ctx: LatteParser.VRetContext, name, counter) -> int:
+        self.code.append('ret')
+
+        return counter
+
+
     def enter_decl(self, ctx: LatteParser.DeclContext, name, counter) -> int:
         var_type = ctx.type_().getText()
         default_value = get_default_value(var_type)
@@ -135,7 +137,13 @@ class Code4:
                 val_exps.append(var)
 
             var_name = name + '_t{}'.format(counter)
-            self.code.append('mul ' + val_exps[0].loc + ' ' + val_exps[1].loc)
+
+            if ctx.mulOp().getText() == '*':
+                op = 'mul'
+            else:
+                op = 'div'
+
+            self.code.append('{} {} {}'.format(op, val_exps[0].loc, val_exps[1].loc))
             self.code.append(var_name + ' = eax')
             counter += 1
 
@@ -341,8 +349,8 @@ class Code4:
         #     self.enter_decr(ctx)
         elif isinstance(ctx, LatteParser.RetContext):
             return self.enter_ret(ctx, name, counter), block_counter
-        # elif isinstance(ctx, LatteParser.VRetContext):
-        #     self.enter_vret(ctx, ret_type)
+        elif isinstance(ctx, LatteParser.VRetContext):
+            return self.enter_vret(ctx, name, counter), block_counter
         # elif isinstance(ctx, LatteParser.CondContext):
         #     self.enter_cond(ctx, ret_type)
         # elif isinstance(ctx, LatteParser.CondElseContext):
