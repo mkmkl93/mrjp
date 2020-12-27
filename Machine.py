@@ -108,6 +108,35 @@ class Machine:
             self.code.append('    call {}'.format(quad.name))
 
             self.code.append('    add ${}, %rsp'.format(4 * max(len(quad.args) - 6, 0)))
+        elif isinstance(quad, QUnOp):
+            res_loc = self.to_mem(quad.res)
+            val_loc = self.to_mem(quad.val)
+
+            if quad.op == '-':
+                op = 'neg'
+            else:
+                pass
+
+            self.code.append('    movl {}, %eax'.format(val_loc))
+            self.code.append('    {} %eax'.format(op))
+            self.code.append('    movl %eax, {}'.format(res_loc))
+        elif isinstance(quad, QBinOp):
+            res_loc = self.to_mem(quad.res)
+            val1_loc = self.to_mem(quad.val1)
+            val2_loc = self.to_mem(quad.val2)
+
+            if quad.op == '*':
+                op = 'imul'
+            elif quad.op == '/':
+                op = 'idiv'
+            else:
+                pass
+
+            self.code.append('    movl {}, %eax'.format(val1_loc))
+            self.code.append('    movl {}, %edx'.format(val2_loc))
+            self.code.append('    {} %edx, %eax'.format(op))
+            self.code.append('    movl %eax, {}'.format(res_loc))
+
 
         # elif line.startswith(('mul', 'div')):
         #     m = re.match(r'(.*) (.*) (.*)', line)

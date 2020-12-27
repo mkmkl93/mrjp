@@ -11,7 +11,7 @@ def check_dir():
 
 
 def check_good():
-    list = ['000', '052']
+    list = ['000', '052', '025', '028']
     for number in list:
         file_name = 'core{}.lat'.format(number)
         file_path = '{}/good/{}'.format(dir_path, file_name)

@@ -89,3 +89,26 @@ class QFunCall(Quad):
             return 'call {} {}'.format(self.name, ' '.join(self.args))
         else:
             return '{} = call {} {}'.format(self.val, self.name, ' '.join(self.args))
+
+
+class QBinOp(Quad):
+    def __init__(self, res, val1, op, val2):
+        super().__init__()
+        self.res = res
+        self.val1 = val1
+        self.op = op
+        self.val2 = val2
+
+    def __str__(self):
+        return '{} = {} {} {}'.format(self.res, self.val1, self.op, self.val2)
+
+
+class QUnOp(Quad):
+    def __init__(self, res, op, val):
+        super().__init__()
+        self.res = res
+        self.op = op
+        self.val = val
+
+    def __str__(self):
+        return '{} = {} {}'.format(self.res, self.op, self.val)
