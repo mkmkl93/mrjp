@@ -6,7 +6,7 @@ from utils import *
 
 class Machine:
     def __init__(self, DEBUG):
-        self.DEBUG = DEBUG.value
+        self.DEBUG = DEBUG
         self.code = []
 
     def debug(self, msg) -> None:
@@ -95,6 +95,19 @@ class Machine:
 
             self.add_epilog()
             self.code.append('    ret')
+        elif isinstance(quad, QFunCall):
+            for arg in quad.args[:6:-1]:
+                arg_loc = self.to_mem(arg)
+                self.code.append('    push {}'.format(arg_loc))
+
+            for arg, reg in zip(quad.args[:6], registers):
+                arg_loc = self.to_mem(arg)
+                self.code.append('    movl {}, %{}'.format(arg_loc, reg))
+
+            self.code.append('    push %rbp')
+            self.code.append('    call {}'.format(quad.name))
+
+            self.code.append('    add ${}, %rsp'.format(4 * max(len(quad.args) - 6, 0)))
 
         # elif line.startswith(('mul', 'div')):
         #     m = re.match(r'(.*) (.*) (.*)', line)

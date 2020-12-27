@@ -11,20 +11,23 @@ def check_dir():
 
 
 def check_good():
-    for file in os.listdir(dir_path + 'good/'):
-        if file.endswith('.lat'):
+    list = ['000', '052']
+    for number in list:
+        file_name = 'core{}.lat'.format(number)
+        file_path = '{}/good/{}'.format(dir_path, file_name)
+        with open(file_path) as file:
             good = True
-            process = subprocess.run(['./latc_ARCH', dir_path + 'good/' + file], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE, shell=False)
-            if process.stdout != b'' or process.stderr != b'OK\n' or process.returncode != 0:
+            process = subprocess.run(['./latc_ARCH', file_path], stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, shell=False, encoding='utf-8')
+            if process.stdout != '' or process.stderr != 'OK\n' or process.returncode != 0:
                 good = False
 
             if good:
-                print("\033[92m" + file + "\033[0m")
+                print("\033[92m" + file_name + "\033[0m")
             else:
-                print("\033[91m" + file + "\033[0m")
-                print(process.stdout.decode("utf-8"))
-                print(process.stderr.decode("utf-8"))
+                print("\033[91m" + file_name + "\033[0m")
+                print(process.stdout)
+                print(process.stderr)
 
 
 def check_bad():

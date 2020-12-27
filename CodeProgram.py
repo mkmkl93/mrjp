@@ -75,3 +75,17 @@ class QEmpty(Quad):
 
     def __str__(self):
         return ''
+
+
+class QFunCall(Quad):
+    def __init__(self, name, val, args):
+        super().__init__()
+        self.val = val
+        self.name = name
+        self.args = args
+
+    def __str__(self):
+        if self.val is None:
+            return 'call {} {}'.format(self.name, ' '.join(self.args))
+        else:
+            return '{} = call {} {}'.format(self.val, self.name, ' '.join(self.args))

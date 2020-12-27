@@ -21,15 +21,15 @@ class FrontEnd:
         sys.exit(1)
 
     def debug(self, msg) -> None:
-        if self.DEBUG == True:
+        if self.DEBUG:
             sys.stderr.write(msg)
 
     def add_bultin(self) -> None:
-        self.envs[0]['printInt'] = Var('int', None, 'void')
-        self.envs[0]['readInt'] = Var('', None, 'int')
-        self.envs[0]['printString'] = Var('string', None, 'void')
-        self.envs[0]['readString'] = Var('', None, 'string')
-        self.envs[0]['error'] = Var('', None, 'void')
+        self.envs[0]['printInt'] = VFunction('int', 'void')
+        self.envs[0]['readInt'] = VFunction('', 'int')
+        self.envs[0]['printString'] = VFunction('string', 'void')
+        self.envs[0]['readString'] = VFunction('', 'string')
+        self.envs[0]['error'] = VFunction('', 'void')
 
     def enter_program(self, ctx: LatteParser.ProgramContext) -> None:
         self.add_bultin()
@@ -52,7 +52,7 @@ class FrontEnd:
         args = []
 
         if arguments is None:
-            self.envs[-1][name] = Var('', None, typ)
+            self.envs[-1][name] = VFunction('', typ)
             return
 
         if name == 'main':
@@ -66,11 +66,9 @@ class FrontEnd:
 
             args.append(arg_typ)
 
-        args_str = ' -> '.join(args)
-
         if name in self.envs[-1]:
             self.error(ctx, "Redefinition of function " + name)
-        self.envs[-1][name] = Var(args_str, None, typ)
+        self.envs[-1][name] = VFunction(args, typ)
 
     def check_for_return_unknown(self, ctx) -> bool:
         if isinstance(ctx, LatteParser.BlockStmtContext):

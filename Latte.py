@@ -29,6 +29,11 @@ class MyErrorListener(ErrorListener):
         sys.exit(1)
 
 
+def debug(msg) -> None:
+    if FLAGS['debug'].value:
+        print(msg)
+
+
 def main(argv):
     input_file = argv[1]
 
@@ -46,22 +51,22 @@ def main(argv):
     parser.addErrorListener(my_error_listener)
     prog_tree = parser.program()
 
-    simplifier = Simplifier(FLAGS['debug'])
-    front_end = FrontEnd(input_file, FLAGS['debug'])
-    code4 = Code4(FLAGS['debug'])
-    machine = Machine(FLAGS['debug'])
+    simplifier = Simplifier(FLAGS['debug'].value)
+    front_end = FrontEnd(input_file, FLAGS['debug'].value)
+    code4 = Code4(FLAGS['debug'].value)
+    machine = Machine(FLAGS['debug'].value)
 
     prog_tree = simplifier.simplify(prog_tree)
     front_end.enter_program(prog_tree)
 
     blocks = code4.enter_program(prog_tree)
     for block in blocks:
-        print(block)
-    print()
+        debug(block)
+    debug('')
 
     machine.translate(blocks)
     for i in machine.code:
-        print(i)
+        debug(i)
 
     output_file_base = os.path.splitext(input_file)[0]
     output_file = output_file_base + '.s'
@@ -70,11 +75,11 @@ def main(argv):
             output.write(line + '\n')
 
     # #'clang -g lib/runtime.s lattests/good/core052.s -o lattests/good/core052 && ./lattests/good/core052'
-    process = subprocess.run(['clang', '-g', 'lib/runtime.c', output_file,
-                             '-o' + output_file_base], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+    process = subprocess.run(['clang', '-g', 'lib/runtime.c', output_file, '-o' + output_file_base],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, encoding='utf-8')
 
-    print(process.stdout.decode("utf-8"))
-    print(process.stderr.decode("utf-8"))
+    debug(process.stdout)
+    debug(process.stderr)
 
     sys.stderr.write('OK\n')
     sys.exit(0)

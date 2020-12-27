@@ -12,7 +12,7 @@ class Code4:
         self.DEBUG = DEBUG
 
     def debug(self, msg) -> None:
-        if self.DEBUG == True:
+        if self.DEBUG:
             sys.stderr.write(msg)
 
     def error(self, ctx: antlr4.ParserRuleContext, msg) -> None:
@@ -22,11 +22,11 @@ class Code4:
         sys.exit(1)
 
     def add_bultin(self) -> None:
-        self.envs[0]['printInt'] = Var('int', None, 'void')
-        self.envs[0]['readInt'] = Var('', None, 'int')
-        self.envs[0]['printString'] = Var('string', None, 'void')
-        self.envs[0]['readString'] = Var('', None, 'string')
-        self.envs[0]['error'] = Var('', None, 'void')
+        self.envs[0]['printInt'] = VFunction('int', 'void')
+        self.envs[0]['readInt'] = VFunction('', 'int')
+        self.envs[0]['printString'] = VFunction('string', 'void')
+        self.envs[0]['readString'] = VFunction('', 'string')
+        self.envs[0]['error'] = VFunction('', 'void')
 
     def enter_program(self, ctx: LatteParser.ProgramContext) -> List[Block]:
         self.add_bultin()
@@ -225,39 +225,28 @@ class Code4:
         #     return Var('boolean', 'true')
         # elif isinstance(ctx, LatteParser.EFalseContext):
         #     return Var('boolean', 'false')
-        # elif isinstance(ctx, LatteParser.EFunCallContext):
-        #     fun_name = ctx.ID().getText()
-        #
-        #     var_list = []
-        #     for x in ctx.expr():
-        #         var, counter = self.enter_expr(x, name, counter)
-        #         var_list.append(var)
-        #
-        #     var_types = [x.type for x in var_list]
-        #     var_type = ' -> '.join(var_types)
-        #     fun = None
-        #
-        #     for env in self.envs[::-1]:
-        #         if fun_name in env:
-        #             if env[fun_name].type == var_type:
-        #                 fun = env[fun_name]
-        #                 break
-        #
-        #     for var in var_list[:6:-1]:
-        #         self.code.append('push ' + var.loc)
-        #
-        #     for var, reg in zip(var_list[:5:], registers):
-        #         self.code.append('{} = {}'.format(reg, var.loc))
-        #
-        #     self.code.append('push rbp')
-        #     self.code.append('call ' + fun_name)
-        #     var_name = name + '_t{}'.format(counter)
-        #
-        #     if fun.res_type != 'void':
-        #         self.code.append(var_name + ' = eax')
-        #     counter += 1
-        #
-        #     return Var(fun.res_type), counter
+        elif isinstance(ctx, LatteParser.EFunCallContext):
+            fun_name = ctx.ID().getText()
+            res_name = block.give_var_name()
+
+            var_list = []
+            for x in ctx.expr():
+                var, counter = self.enter_expr(x, block)
+                var_list.append(var)
+
+            var_types = [x.type for x in var_list]
+            var_type = ' -> '.join(var_types)
+            fun = None
+
+            for env in self.envs[::-1]:
+                if fun_name in env:
+                    if env[fun_name].type == var_type:
+                        fun = env[fun_name]
+                        break
+
+            block.add_quad(QFunCall(fun_name, res_name, [x.loc for x in var_list]))
+
+            return Var(fun.res_type, loc=res_name), block
         # elif isinstance(ctx, LatteParser.EStrContext):
         #     return Var('string', ctx.STR().getText())
         # elif isinstance(ctx, LatteParser.EParenContext):
@@ -378,9 +367,9 @@ class Code4:
         #     self.enter_cond_else(ctx, ret_type)
         # elif isinstance(ctx, LatteParser.WhileContext):
         #     self.enter_while(ctx, ret_type)
-        # elif isinstance(ctx, LatteParser.SExpContext):
-        #     _, ret = self.enter_expr(ctx.expr(), name, counter)
-        #     return ret, block_counter
+        elif isinstance(ctx, LatteParser.SExpContext):
+            _, block = self.enter_expr(ctx.expr(), block)
+            return block
         elif isinstance(ctx, LatteParser.EmptyContext):
             return block
         else:

@@ -2,7 +2,7 @@ from antlr.LatteParser import LatteParser
 from Vars import *
 from CodeProgram import *
 
-registers = ['edi', 'esi', 'edx', 'ecx', 'r8', 'r9']
+registers = ['edi', 'esi', 'edx', 'ecx', 'r8d', 'r9d']
 
 def get_default_value(typ):
     if typ == 'int':

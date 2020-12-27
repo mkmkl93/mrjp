@@ -1,0 +1,11 @@
+int main() {
+	p();
+	printInt(53);
+}
+
+void p() {
+	printInt(53);
+	{
+
+	}
+}
