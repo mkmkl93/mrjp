@@ -22,15 +22,15 @@ class Code4:
         sys.exit(1)
 
     def add_bultin(self) -> None:
-        self.envs[0]['printInt'] = VFunction('int', 'void')
-        self.envs[0]['readInt'] = VFunction('', 'int')
-        self.envs[0]['printString'] = VFunction('string', 'void')
-        self.envs[0]['readString'] = VFunction('', 'string')
-        self.envs[0]['error'] = VFunction('', 'void')
+        self.envs[0]['printInt'] = VFunction(['int'], 'void')
+        self.envs[0]['readInt'] = VFunction([], 'int')
+        self.envs[0]['printString'] = VFunction(['string'], 'void')
+        self.envs[0]['readString'] = VFunction([], 'string')
+        self.envs[0]['error'] = VFunction([], 'void')
 
     def enter_program(self, ctx: LatteParser.ProgramContext) -> List[Block]:
         self.add_bultin()
-        res = []
+        res: List[Block] = []
 
         for topDef in ctx.children:
             if isinstance(topDef, LatteParser.TopDefContext):
@@ -49,23 +49,21 @@ class Code4:
         args = []
 
         if arguments is None:
-            self.envs[-1][name] = VFunction('', typ)
+            self.envs[-1][name] = VFunction([], typ)
             return
 
         for i in range(len(arguments.type_())):
             arg_typ = arguments.type_(i).getText()
             args.append(arg_typ)
 
-        args_str = ' -> '.join(args)
-
-        self.envs[-1][name] = VFunction(args_str, typ)
+        self.envs[-1][name] = VFunction(args, typ)
 
     def enter_top_def(self, ctx: LatteParser.TopDefContext) -> Block:
         self.envs.append({})
         name = ctx.ID().getText()
         args = ctx.arg()
         ctx_block = ctx.block()
-        block = Block(name)
+        block = SmallBlock(name)
 
         block.add_quad(QFunBegin(name))
 
@@ -83,8 +81,7 @@ class Code4:
 
         block = self.enter_block(ctx_block, block)
 
-        block.total_count += block.var_counter
-        block.quads[0] = QFunBegin(name, block.total_count)
+        block.limit_locals(block.var_counter)
         block.add_quad(QFunEnd(name))
         self.envs.pop()
 
@@ -96,9 +93,13 @@ class Code4:
                 continue
             elif isinstance(stmt, LatteParser.StmtContext):
                 block = self.enter_stmt(stmt, block)
+            elif isinstance(stmt, LatteParser.BlockContext):
+                block = self.enter_block(stmt, block)
             else:
                 self.error(ctx, "Unresolved instance in enter_block stmt")
-        block.add_quad(QEmpty())
+
+        if isinstance(block, SmallBlock) and block.quads != [] and not isinstance(block.quads[-1], QEmpty):
+            block.add_quad(QEmpty())
 
         return block
 
@@ -109,13 +110,12 @@ class Code4:
 
         return block
 
-    # def enter_vret(self, ctx: LatteParser.VRetContext, name, counter) -> int:
-    #     self.code.append('ret')
-    #
-    #     return counter
+    def enter_vret(self, ctx: LatteParser.VRetContext, block) -> Block:
+        block.add_quad(QReturn())
 
+        return block
 
-    def enter_decl(self, ctx: LatteParser.DeclContext, name, counter) -> int:
+    def enter_decl(self, ctx: LatteParser.DeclContext, block) -> Block:
         var_type = ctx.type_().getText()
         default_value = get_default_value(var_type)
 
@@ -123,17 +123,17 @@ class Code4:
             var_item: LatteParser.ItemContext = ctx.item(i)
             var_name = var_item.ID().getText()
             item_expr = var_item.expr()
-            var_loc = '{}_{}'.format(name, var_name)
+            var_loc = block.give_var_name()
 
             if item_expr is None:
                 var_value = Var(var_type, default_value, loc=default_value)
             else:
-                var_value, counter = self.enter_expr(item_expr, name, counter)
+                var_value, counter = self.enter_expr(item_expr, block)
 
             self.envs[-1][var_name] = Var(var_type, var_value.value, loc=var_loc)
-            self.code.append('{} = {}'.format(var_loc, var_value.loc))
+            block.add_quad(QEq(var_loc, var_value.loc))
 
-        return counter
+        return block
 
     def enter_expr(self, ctx: LatteParser.ExprContext, block) -> (Var, Block):
         if isinstance(ctx, LatteParser.EUnOpContext):
@@ -202,11 +202,11 @@ class Code4:
         #         self.error(ctx, "Mismatch in types of comparison")
         #
         #     return Var('boolean')
-        # elif isinstance(ctx, LatteParser.EIdContext):
-        #     var_name = ctx.getText()
-        #     for env in self.envs[::-1]:
-        #         if var_name in env:
-        #             return env[var_name], counter
+        elif isinstance(ctx, LatteParser.EIdContext):
+            var_name = ctx.getText()
+            for env in self.envs[::-1]:
+                if var_name in env:
+                    return env[var_name], block
         elif isinstance(ctx, LatteParser.EIntContext):
             var_name = block.give_var_name()
             quad = QEq(var_name, ctx.INT().getText())
@@ -226,13 +226,12 @@ class Code4:
                 var, counter = self.enter_expr(x, block)
                 var_list.append(var)
 
-            var_types = [x.type for x in var_list]
-            var_type = ' -> '.join(var_types)
+            fun_type = [x.type for x in var_list]
             fun = None
 
             for env in self.envs[::-1]:
                 if fun_name in env:
-                    if env[fun_name].type == var_type:
+                    if env[fun_name].type == fun_type:
                         fun = env[fun_name]
                         break
 
@@ -337,6 +336,8 @@ class Code4:
             self.envs.append({})
 
             name = block.give_block_name()
+            rec_block = self.enter_block(ctx, SmallBlock(name))
+            block = block.add_block(rec_block)
 
             self.envs.pop()
             return block
@@ -350,8 +351,8 @@ class Code4:
         #     self.enter_decr(ctx)
         elif isinstance(ctx, LatteParser.RetContext):
             return self.enter_ret(ctx, block)
-        # elif isinstance(ctx, LatteParser.VRetContext):
-        #     return self.enter_vret(ctx, name, counter), block_counter
+        elif isinstance(ctx, LatteParser.VRetContext):
+            return self.enter_vret(ctx, block)
         # elif isinstance(ctx, LatteParser.CondContext):
         #     self.enter_cond(ctx, ret_type)
         # elif isinstance(ctx, LatteParser.CondElseContext):

@@ -22,3 +22,6 @@ class VFunction(Var):
         super().__init__()
         self.res_type = res_type
         self.type = type
+
+    def __eq__(self, other):
+        return other.res_type == self.res_type and other.type == self.type

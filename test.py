@@ -11,7 +11,8 @@ def check_dir():
 
 
 def check_good():
-    list = ['000', '052', '025', '028']
+    list = ['000', '045', '025', '028', '011', '020', '030', '021', '053', '037', '050', '031', '046', '035', '049', '036', '044', '038', '004', '027', '041', '007', '022', '042', '002', '009', '043', '029', '033', '048', '018', '006', '024', '005', '008', '003', '014', '016', '010', '015', '047', '039', '023', '026', '019', '034', '032', '012', '013', '017', '040', '001']
+    count = 0
     for number in list:
         file_name = 'core{}.lat'.format(number)
         file_path = '{}/good/{}'.format(dir_path, file_name)
@@ -24,10 +25,13 @@ def check_good():
 
             if good:
                 print("\033[92m" + file_name + "\033[0m")
+                count += 1
             else:
                 print("\033[91m" + file_name + "\033[0m")
                 print(process.stdout)
                 print(process.stderr)
+
+    print("\033[94m" + 'Passes: {}/{}'.format(count, len(list)) + "\033[0m")
 
 
 def check_bad():

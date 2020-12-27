@@ -25,11 +25,11 @@ class FrontEnd:
             sys.stderr.write(msg)
 
     def add_bultin(self) -> None:
-        self.envs[0]['printInt'] = VFunction('int', 'void')
-        self.envs[0]['readInt'] = VFunction('', 'int')
-        self.envs[0]['printString'] = VFunction('string', 'void')
-        self.envs[0]['readString'] = VFunction('', 'string')
-        self.envs[0]['error'] = VFunction('', 'void')
+        self.envs[0]['printInt'] = VFunction(['int'], 'void')
+        self.envs[0]['readInt'] = VFunction([], 'int')
+        self.envs[0]['printString'] = VFunction(['string'], 'void')
+        self.envs[0]['readString'] = VFunction([], 'string')
+        self.envs[0]['error'] = VFunction([], 'void')
 
     def enter_program(self, ctx: LatteParser.ProgramContext) -> None:
         self.add_bultin()
@@ -52,7 +52,7 @@ class FrontEnd:
         args = []
 
         if arguments is None:
-            self.envs[-1][name] = VFunction('', typ)
+            self.envs[-1][name] = VFunction(args, typ)
             return
 
         if name == 'main':
@@ -75,6 +75,7 @@ class FrontEnd:
             return self.check_for_return_block(ctx.block())
         if isinstance(ctx, LatteParser.StmtContext):
             return self.check_for_return_stmt(ctx)
+        return False
 
     def check_for_return_stmt(self, ctx: LatteParser.StmtContext) -> bool:
         if isinstance(ctx, (LatteParser.VRetContext, LatteParser.RetContext)):
@@ -97,15 +98,17 @@ class FrontEnd:
                 return True
         elif isinstance(ctx, LatteParser.WhileContext):
             return self.check_for_return_unknown(ctx.stmt())
-        return False
+        else:
+            return self.check_for_return_unknown(ctx)
 
     def check_for_return_block(self, ctx: LatteParser.BlockContext) -> bool:
-        for stmt in ctx.children:
+        for stmt in reversed(ctx.children):
             if isinstance(stmt, antlr4.TerminalNode):
                 continue
             elif isinstance(stmt, LatteParser.StmtContext):
-                if self.check_for_return_stmt(stmt):
-                    return True
+                return self.check_for_return_stmt(stmt)
+            else:
+                return False
 
         return False
 
@@ -264,13 +267,12 @@ class FrontEnd:
         elif isinstance(ctx, LatteParser.EFunCallContext):
             fun_name = ctx.ID().getText()
             var_list = [self.enter_expr(x) for x in ctx.expr()]
-            var_types = [x.type for x in var_list]
-            var_type = ' -> '.join(var_types)
+            fun_type = [x.type for x in var_list]
             fun = None
 
             for env in self.envs[::-1]:
                 if fun_name in env:
-                    if env[fun_name].type == var_type:
+                    if env[fun_name].type == fun_type:
                         fun = env[fun_name]
                         break
 
@@ -370,7 +372,6 @@ class FrontEnd:
             self.envs.pop()
 
     def enter_stmt(self, ctx: LatteParser.StmtContext, ret_type):
-        self.debug(ctx.getText() + "\n")
         if isinstance(ctx, LatteParser.BlockStmtContext):
             self.envs.append({})
             self.enter_block(ctx.block(), ret_type)

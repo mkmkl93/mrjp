@@ -1,8 +1,0 @@
-// Author: Tomasz Wysocki 277696
-int main() {
-    if(true)
-	printInt(5);
-    else
-        int a;
-    return 0;
-}

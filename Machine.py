@@ -13,26 +13,6 @@ class Machine:
         if self.DEBUG:
             sys.stderr.write(msg)
 
-    def to_reg_or_con(self, var: str) -> str:
-        if var in registers:
-            return '%' + var
-        elif var.isnumeric():
-            return '$' + var
-        else:
-            var = self.to_any(var)
-            self.code.append('    mov {}, %eax'.format(var))
-            return '%eax'
-
-    def to_any(self, var: str) -> str:
-        if var not in registers and not var.isnumeric():
-            return '-' + str(self.blocks[-1].vars[var]) + '(%rbp)'
-        elif var in registers:
-            return '%' + var
-        elif var.isnumeric():
-            return '$' + var
-        else:
-            self.debug("Not handled to_any " + var + '\n')
-
     def to_mem(self, var: str):
         if var.isnumeric():
             return '${}'.format(int(var))
@@ -44,6 +24,7 @@ class Machine:
         self.add_start()
 
         for block in blocks:
+            self.code.append('{}:'.format(block.name))
             self.translate_block(block)
 
         self.code.append('')
@@ -54,10 +35,12 @@ class Machine:
         self.code.append('')
 
     def translate_block(self, block: Block):
-        self.code.append('{}:'.format(block.name))
-
-        for quad in block.quads:
-            self.add_quad(quad)
+        if isinstance(block, BigBlock):
+            for small_block in block.blocks:
+                self.translate_block(small_block)
+        else:
+            for quad in block.quads:
+                self.add_quad(quad)
 
         self.code.append('')
 
