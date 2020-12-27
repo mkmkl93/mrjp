@@ -1,14 +1,8 @@
 from antlr.LatteParser import LatteParser
+from Vars import *
+from CodeProgram import *
 
-registers = ['edi', 'rsi', 'rdx', 'rcx', 'r8', 'r9', 'eax']
-
-class Var:
-    def __init__(self, typ=None, value=None, res_type=None, loc=None):
-        self.type = typ
-        self.value = value
-        self.res_type = res_type
-        self.loc = loc
-
+registers = ['edi', 'esi', 'edx', 'ecx', 'r8', 'r9']
 
 def get_default_value(typ):
     if typ == 'int':

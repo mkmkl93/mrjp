@@ -5,6 +5,7 @@ import antlr4
 import os
 import subprocess
 from absl import app, flags
+from Simplifier import Simplifier
 from FrontEnd import FrontEnd
 from Code4 import Code4
 from Machine import Machine
@@ -44,18 +45,21 @@ def main(argv):
     parser.removeErrorListeners()
     parser.addErrorListener(my_error_listener)
     prog_tree = parser.program()
-    compiler = FrontEnd(input_file, FLAGS['debug'])
+
+    simplifier = Simplifier(FLAGS['debug'])
+    front_end = FrontEnd(input_file, FLAGS['debug'])
     code4 = Code4(FLAGS['debug'])
     machine = Machine(FLAGS['debug'])
 
-    compiler.enter_program(prog_tree)
+    prog_tree = simplifier.simplify(prog_tree)
+    front_end.enter_program(prog_tree)
 
-    code4.enter_program(prog_tree)
-    for i in code4.code:
-        print(i)
+    blocks = code4.enter_program(prog_tree)
+    for block in blocks:
+        print(block)
     print()
 
-    machine.translate(code4.code)
+    machine.translate(blocks)
     for i in machine.code:
         print(i)
 
@@ -68,9 +72,6 @@ def main(argv):
     # #'clang -g lib/runtime.s lattests/good/core052.s -o lattests/good/core052 && ./lattests/good/core052'
     process = subprocess.run(['clang', '-g', 'lib/runtime.c', output_file,
                              '-o' + output_file_base], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
-
-    # process = subprocess.run(['gcc', '-g', '-static', '-nostdlib', '-no-pie', '-emain', 'lib/runtime.s', output_file,
-    #                           '-o' + output_file_base], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
 
     print(process.stdout.decode("utf-8"))
     print(process.stderr.decode("utf-8"))
