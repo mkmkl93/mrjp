@@ -3,6 +3,9 @@ class Block:
         self.name = name
         self.var_counter = 0
         self.block_counter = 0
+        self.while_counter = 0
+        self.if_counter = 0
+        self.label_counter = 0
 
     def give_var_name(self):
         self.var_counter += 1
@@ -12,6 +15,26 @@ class Block:
         self.block_counter += 1
         return '{}_b{}'.format(self.name, self.block_counter)
 
+    def give_while_number(self):
+        self.while_counter += 1
+        return self.while_counter
+
+    def give_if_number(self):
+        self.if_counter += 1
+        return self.if_counter
+
+    def give_label(self):
+        self.label_counter += 1
+        return '{}_l{}'.format(self.name, self.label_counter)
+
+    def add_quad(self, quad):
+        pass
+
+    def add_block(self, block):
+        pass
+
+    def limit_locals(self, limit):
+        pass
 
 class BigBlock(Block):
     def __init__(self, block):
@@ -19,6 +42,9 @@ class BigBlock(Block):
         self.blocks = [block]
         self.var_counter = block.var_counter
         self.block_counter = block.block_counter
+        self.if_counter = block.if_counter
+        self.while_counter = block.while_counter
+        self.label_counter = block.label_counter
 
     def add_quad(self, quad):
         self.blocks[-1].add_quad(quad)
@@ -51,7 +77,6 @@ class SmallBlock(Block):
     def limit_locals(self, limit):
         self.quads[0] = QFunBegin(str(self.quads[0]), limit)
 
-
     def __str__(self):
         if not self.quads:
             return ''
@@ -61,6 +86,22 @@ class SmallBlock(Block):
 class Quad:
     def __init__(self):
         pass
+
+
+class QLabel:
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return '{}:'.format(self.name)
+
+
+class QJump:
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return 'jump {}'.format(self.name)
 
 
 class QReturn(Quad):

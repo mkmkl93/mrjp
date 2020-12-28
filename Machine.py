@@ -125,6 +125,8 @@ class Machine:
                 op = 'idiv'
             elif quad.op == '+' and quad.typ == 'int':
                 op = 'add'
+            elif quad.op == '+' and quad.typ == 'string':
+                op = 'concat'
             elif quad.op == '-':
                 op = 'sub'
             elif quad.op == '%':
@@ -133,27 +135,19 @@ class Machine:
 
             self.code.append('    movl {}, %eax'.format(val1_loc))
             self.code.append('    movl {}, %edx'.format(val2_loc))
-            self.code.append('    {} %edx, %eax'.format(op))
+
+            if op != 'concat':
+                self.code.append('    {} %edx, %eax'.format(op))
+            else:
+                self.code.append('    mov %eax, %edi')
+                self.code.append('    mov %edx, %esi')
+                self.code.append('    call concat')
+
             self.code.append('    movl {}, {}'.format(result, res_loc))
-
-
-        # elif line.startswith(('mul', 'div')):
-        #     m = re.match(r'(.*) (.*) (.*)', line)
-        #     op = m.group(1)
-        #     dest = m.group(2)
-        #     source = m.group(2)
-        #
-        #     self.add_mul(op, dest, source)
-        # elif line.startswith('call'):
-        #     self.code.append('    ' + line)
-        # elif line.startswith('push'):
-        #     m = re.match(r'push (.*)', line)
-        #
-        #     self.code.append('    push %' + m.group(1))
-        # elif line.startswith('neg'):
-        #     m = re.match(r'neg (.*)', line)
-        #
-        #     self.add_neg(m.group(1))
+        elif isinstance(quad, QLabel):
+            self.code.append(str(quad))
+        elif isinstance(quad, QJump):
+            self.code.append('    jmp {}'.format(quad.name))
         elif isinstance(quad, QEmpty):
             return
         else:

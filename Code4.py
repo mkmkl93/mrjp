@@ -243,20 +243,41 @@ class Code4:
         else:
             self.error(ctx, "Unresolved instance in enter_expr")
 
-    # def enter_while(self, ctx: LatteParser.WhileContext, ret_type) -> None:
-    #     condition = ctx.expr()
-    #     condition_var = self.enter_expr(condition)
-    #
-    #     if condition_var.type != 'boolean':
-    #         self.error(ctx, "Condition doesn't have type boolean")
-    #
-    #     if condition_var.value == 'true' and isinstance(ctx.stmt(), LatteParser.DeclContext):
-    #         self.error(ctx, 'Cannot declare variable here')
-    #
-    #     self.envs.append({})
-    #     self.enter_stmt(ctx.stmt(), ret_type)
-    #     self.envs.pop()
-    #
+    def enter_while(self, ctx: LatteParser.WhileContext, block: Block) -> Block:
+        condition = ctx.expr()
+
+        while_number = block.give_while_number()
+        while_name = '{}_w{}'.format(block.name, while_number)
+        while_start = '{}S'.format(while_name)
+        while_end = '{}E'.format(while_name)
+
+        block.add_quad(QLabel(while_name))
+        block = self.enter_lazy_expr(condition, block, while_start, while_end)
+
+        self.envs.append({})
+        block.add_quad(QLabel(while_start))
+        block = self.enter_stmt(ctx.stmt(), block)
+        self.envs.pop()
+
+        block.add_quad(QJump(while_name))
+        block.add_quad(QLabel(while_end))
+
+        return block
+
+    def enter_lazy_expr(self, ctx: LatteParser.ExprContext, block, pos_label, neg_label) -> Block:
+        if isinstance(ctx, LatteParser.ETrueContext):
+            block.add_quad(QJump(pos_label))
+        elif isinstance(ctx, LatteParser.EAndContext):
+            exp1 = ctx.expr(0)
+            exp2 = ctx.expr(1)
+
+            label = block.give_label()
+
+            block = self.enter_lazy_expr(exp1, block, label, neg_label)
+            block.add_quad(QLabel(label))
+            block = self.enter_lazy_expr(exp2, block, pos_label, neg_label)
+        return block
+
     # def enter_ass(self, ctx: LatteParser.AssContext, name, counter) -> None:
     #     var_name = ctx.ID().getText()
     #     exp = ctx.expr()
@@ -355,8 +376,8 @@ class Code4:
         #     self.enter_cond(ctx, ret_type)
         # elif isinstance(ctx, LatteParser.CondElseContext):
         #     self.enter_cond_else(ctx, ret_type)
-        # elif isinstance(ctx, LatteParser.WhileContext):
-        #     self.enter_while(ctx, ret_type)
+        elif isinstance(ctx, LatteParser.WhileContext):
+            return self.enter_while(ctx, block)
         elif isinstance(ctx, LatteParser.SExpContext):
             _, block = self.enter_expr(ctx.expr(), block)
             return block
