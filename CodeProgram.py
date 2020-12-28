@@ -130,15 +130,16 @@ class QFunCall(Quad):
 
 
 class QBinOp(Quad):
-    def __init__(self, res, val1, op, val2):
+    def __init__(self, res, val1, op, val2, typ='int'):
         super().__init__()
         self.res = res
         self.val1 = val1
         self.op = op
         self.val2 = val2
+        self.typ = typ
 
     def __str__(self):
-        return '{} = {} {} {}'.format(self.res, self.val1, self.op, self.val2)
+        return '{} = {} {} {} ({})'.format(self.res, self.val1, self.op, self.val2, self.typ)
 
 
 class QUnOp(Quad):

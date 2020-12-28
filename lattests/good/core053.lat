@@ -1,6 +1,7 @@
 int main() {
 	p();
 	printInt(53);
+	return 0; //<- tego tu nie bylo
 }
 
 void p() {

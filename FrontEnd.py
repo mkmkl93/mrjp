@@ -73,8 +73,6 @@ class FrontEnd:
     def check_for_return_unknown(self, ctx) -> bool:
         if isinstance(ctx, LatteParser.BlockStmtContext):
             return self.check_for_return_block(ctx.block())
-        if isinstance(ctx, LatteParser.StmtContext):
-            return self.check_for_return_stmt(ctx)
         return False
 
     def check_for_return_stmt(self, ctx: LatteParser.StmtContext) -> bool:

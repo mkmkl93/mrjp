@@ -8,6 +8,7 @@ class Machine:
     def __init__(self, DEBUG):
         self.DEBUG = DEBUG
         self.code = []
+        self.strings = []
 
     def debug(self, msg) -> None:
         if self.DEBUG:
@@ -28,11 +29,23 @@ class Machine:
             self.translate_block(block)
 
         self.code.append('')
+        self.add_strings()
 
     def add_start(self):
+        self.code.append('.text')
         self.code.append('    .global main')
         self.code.append('    .text')
         self.code.append('')
+
+    def add_strings(self):
+        code_tmp = self.code
+        self.code = []
+
+        self.code.append('.data')
+        for label, val in self.strings:
+            self.code.append('    {}: .string {}'.format(label, val))
+
+        self.code.extend(code_tmp)
 
     def translate_block(self, block: Block):
         if isinstance(block, BigBlock):
@@ -48,16 +61,6 @@ class Machine:
         self.code.append('    mov %rbp, %rsp')
         self.code.append('    pop %rbp')
 
-    # def add_variables(self, code):
-    #     offset = 4
-    #
-    #     for line in code:
-    #         m = re.match(r"(.*?) = .*", line)
-    #
-    #         if m and m.group(1) not in registers:
-    #             self.blocks[-1].vars[m.group(1)] = offset
-    #             offset += 4
-    #
     def add_quad(self, quad):
         if isinstance(quad, QFunBegin):
             self.code.append('    push %rbp')
@@ -66,10 +69,17 @@ class Machine:
         elif isinstance(quad, QFunEnd):
             return
         elif isinstance(quad, QEq):
-            loc1 = self.to_mem(quad.val1)
-            loc2 = self.to_mem(quad.val2)
-            self.code.append('    movl {}, %eax'.format(loc2))
-            self.code.append('    movl %eax, {}'.format(loc1))
+            if quad.val2[0] == '"':
+                self.strings.append((quad.val1 + '__str', quad.val2))
+                loc1 = self.to_mem(quad.val1)
+
+                self.code.append('    movl ${}, {}'.format(quad.val1 + '__str', loc1))
+                return
+            else:
+                loc1 = self.to_mem(quad.val1)
+                loc2 = self.to_mem(quad.val2)
+                self.code.append('    movl {}, %eax'.format(loc2))
+                self.code.append('    movl %eax, {}'.format(loc1))
         elif isinstance(quad, QReturn):
             if quad.val is not None:
                 loc = self.to_mem(quad.val)
@@ -107,18 +117,24 @@ class Machine:
             res_loc = self.to_mem(quad.res)
             val1_loc = self.to_mem(quad.val1)
             val2_loc = self.to_mem(quad.val2)
+            result = '%eax'
 
             if quad.op == '*':
                 op = 'imul'
             elif quad.op == '/':
                 op = 'idiv'
-            else:
-                pass
+            elif quad.op == '+' and quad.typ == 'int':
+                op = 'add'
+            elif quad.op == '-':
+                op = 'sub'
+            elif quad.op == '%':
+                op = 'idiv'
+                result = '%edx'
 
             self.code.append('    movl {}, %eax'.format(val1_loc))
             self.code.append('    movl {}, %edx'.format(val2_loc))
             self.code.append('    {} %edx, %eax'.format(op))
-            self.code.append('    movl %eax, {}'.format(res_loc))
+            self.code.append('    movl {}, {}'.format(result, res_loc))
 
 
         # elif line.startswith(('mul', 'div')):
@@ -143,39 +159,6 @@ class Machine:
         else:
             self.debug("Not handled " + quad + '\n')
 
-    # def add_mov(self, dest, source):
-    #     if dest not in registers and source not in registers:
-    #         source = self.to_reg_or_con(source)
-    #     else:
-    #         source = self.to_any(source)
-    #
-    #     dest = self.to_any(dest)
-    #
-    #     if source.startswith('$') and dest[0] != '%':
-    #         op = 'movl'
-    #     else:
-    #         op = 'mov'
-    #
-    #     self.code.append('    {} {}, {}'.format(op, source, dest))
-    #
-    # def add_ret(self, source):
-    #     self.code.append('    ret')
-    #
-    # def add_neg(self, source):
-    #     source = self.to_any(source)
-    #
-    #     if source.startswith('%'):
-    #         op = 'neg'
-    #     else:
-    #         op = 'negl'
-    #
-    #     self.code.append('    {} {}'.format(op, source))
-    #
-    # def add_mul(self, op, mul1, mul2):
-    #     mul1 = self.to_any(mul1)
-    #     mul2 = self.to_reg_or_con(mul2)
-    #
-    #     self.code.append('    i{} {}, {}'.format(op, mul1, mul2))
 
 
 

@@ -145,33 +145,27 @@ class Code4:
             block.add_quad(QUnOp(var_loc, op, var_exp.loc))
 
             return Var(var_exp.type, loc=var_loc), block
-        elif isinstance(ctx, LatteParser.EMulOpContext):
+        elif isinstance(ctx, (LatteParser.EAddOpContext, LatteParser.EMulOpContext)):
             val_exps: List[Var] = []
             for x in ctx.expr():
                 var, block = self.enter_expr(x, block)
                 val_exps.append(var)
 
+            typ = None
+
+            for exp in val_exps:
+                if typ is None and exp.type in ["int", "string"]:
+                    typ = exp.type
+
             var_name = block.give_var_name()
 
-            op = ctx.mulOp().getText()
+            if isinstance(ctx, LatteParser.EMulOpContext):
+                op = ctx.mulOp().getText()
+            else:
+                op = ctx.addOp().getText()
 
-            block.add_quad(QBinOp(var_name, val_exps[0].loc, op, val_exps[1].loc))
-
-            return Var('int', loc=var_name), block
-        # elif isinstance(ctx, LatteParser.EAddOpContext):
-        #     val_exps = [self.enter_expr(x) for x in ctx.expr()]
-        #     typ = None
-        #
-        #     for exp in val_exps:
-        #         if typ is None and exp.type in ["int", "string"]:
-        #             typ = exp.type
-        #         elif exp.type != typ:
-        #             self.error(ctx, "Not all elements are of the same type")
-        #
-        #     if ctx.addOp().getText() == '-' and typ == 'string':
-        #         self.error(ctx, 'Cannot subtract strings')
-        #
-        #     return Var(typ)
+            block.add_quad(QBinOp(var_name, val_exps[0].loc, op, val_exps[1].loc, typ))
+            return Var(typ, None, loc=var_name), block
         # elif isinstance(ctx, LatteParser.ERelOpContext):
         #     left, right = ctx.expr()
         #
@@ -238,8 +232,12 @@ class Code4:
             block.add_quad(QFunCall(fun_name, res_name, [x.loc for x in var_list]))
 
             return Var(fun.res_type, loc=res_name), block
-        # elif isinstance(ctx, LatteParser.EStrContext):
-        #     return Var('string', ctx.STR().getText())
+        elif isinstance(ctx, LatteParser.EStrContext):
+            var_name = block.give_var_name()
+            quad = QEq(var_name, ctx.STR().getText())
+
+            block.add_quad(quad)
+            return VString(ctx.STR().getText(), loc=var_name), block
         # elif isinstance(ctx, LatteParser.EParenContext):
         #     return self.enter_expr(ctx.expr())
         else:
