@@ -18,9 +18,34 @@ def check_good():
         file_path = '{}/good/{}'.format(dir_path, file_name)
         with open(file_path) as file:
             good = True
-            process = subprocess.run(['./latc_ARCH', file_path], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE, shell=False, encoding='utf-8')
+            try:
+                process = subprocess.run(['./latc_ARCH', file_path], stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE, shell=False, encoding='utf-8', timeout=1)
+            except subprocess.TimeoutExpired:
+                process.returncode = -1
+                print('timeout')
+
             if process.stdout != '' or process.stderr != 'OK\n' or process.returncode != 0:
+                good = False
+
+            if os.path.isfile(file_path[:-4]):
+                try:
+                    process = subprocess.run([file_path[:-4]], stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE, shell=False, encoding='utf-8', timeout=1)
+                except subprocess.TimeoutExpired:
+                    process.returncode = -1
+                    print('timeout')
+
+                if process.returncode != 0:
+                    good = False
+                else:
+                    with open(file_path[:-4] + '.output') as file2:
+                        file_content = ''.join([x for x in file2])
+                        process_output = process.stdout
+
+                        if file_content != process_output:
+                            good = False
+            else:
                 good = False
 
             if good:
@@ -28,8 +53,8 @@ def check_good():
                 count += 1
             else:
                 print("\033[91m" + file_name + "\033[0m")
-                print(process.stdout)
-                print(process.stderr)
+                print(process.stdout[:100])
+                print(process.stderr[:100])
 
     print("\033[94m" + 'Passes: {}/{}'.format(count, len(list)) + "\033[0m")
 

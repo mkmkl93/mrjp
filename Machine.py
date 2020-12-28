@@ -113,7 +113,7 @@ class Machine:
             if quad.op == '-':
                 op = 'neg'
             else:
-                pass
+                op = 'not'
 
             self.code.append('    movl {}, %eax'.format(val_loc))
             self.code.append('    {} %eax'.format(op))
@@ -141,12 +141,16 @@ class Machine:
             self.code.append('    movl {}, %eax'.format(val1_loc))
             self.code.append('    movl {}, %edx'.format(val2_loc))
 
-            if op != 'concat':
-                self.code.append('    {} %edx, %eax'.format(op))
-            else:
+            if op == 'concat':
                 self.code.append('    mov %eax, %edi')
                 self.code.append('    mov %edx, %esi')
                 self.code.append('    call concat')
+            elif op == 'idiv':
+                self.code.append('    mov %edx, %r10d')
+                self.code.append('    cdq')
+                self.code.append('    idiv %r10d')
+            else:
+                self.code.append('    {} %edx, %eax'.format(op))
 
             self.code.append('    movl {}, {}'.format(result, res_loc))
         elif isinstance(quad, QLabel):
