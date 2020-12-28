@@ -75,7 +75,14 @@ class Simplifier:
                     ctx.children[i] = stmt.stmt()
                     self.enter_stmt(stmt.stmt(), ret_type)
                 elif stmt.expr().getText() == 'false':
-                    ctx.children[i] = LatteParser.EmptyContext()
+                    ctx.children[i] = LatteParser.EmptyContext(ctx.parser, ctx)
+            elif isinstance(stmt, LatteParser.CondElseContext):
+                if stmt.expr().getText() == 'true':
+                    ctx.children[i] = stmt.stmt(0)
+                    self.enter_stmt(stmt.stmt(0), ret_type)
+                elif stmt.expr().getText() == 'false':
+                    ctx.children[i] = stmt.stmt(1)
+                    self.enter_stmt(stmt.stmt(1), ret_type)
             elif isinstance(stmt, LatteParser.StmtContext):
                 self.enter_stmt(stmt, ret_type)
             else:

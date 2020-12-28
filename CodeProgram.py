@@ -97,11 +97,21 @@ class QLabel:
 
 
 class QJump:
-    def __init__(self, name):
+    def __init__(self, op, name):
+        self.op = op
         self.name = name
 
     def __str__(self):
-        return 'jump {}'.format(self.name)
+        return '{} {}'.format(self.op, self.name)
+
+
+class QCmp:
+    def __init__(self, val1, val2):
+        self.val1 = val1
+        self.val2 = val2
+
+    def __str__(self):
+        return 'cmp {}, {}'.format(self.val1, self.val2)
 
 
 class QReturn(Quad):

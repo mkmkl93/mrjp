@@ -5,6 +5,12 @@ class Var:
         self.loc = loc
 
 
+class VBool(Var):
+    def __init__(self, value, loc):
+        super().__init__(value=value, loc=loc)
+        self.type = 'boolean'
+
+
 class VInt(Var):
     def __init__(self, value, loc):
         super().__init__(value=value, loc=loc)

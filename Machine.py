@@ -15,6 +15,9 @@ class Machine:
             sys.stderr.write(msg)
 
     def to_mem(self, var: str):
+        if var in registers:
+            return '%' + var
+
         if var.isnumeric():
             return '${}'.format(int(var))
 
@@ -101,6 +104,8 @@ class Machine:
             self.code.append('    call {}'.format(quad.name))
 
             self.code.append('    add ${}, %rsp'.format(4 * max(len(quad.args) - 6, 0)))
+            res_loc = self.to_mem(quad.val)
+            self.code.append('    movl %eax, {}'.format(res_loc))
         elif isinstance(quad, QUnOp):
             res_loc = self.to_mem(quad.res)
             val_loc = self.to_mem(quad.val)
@@ -147,9 +152,16 @@ class Machine:
         elif isinstance(quad, QLabel):
             self.code.append(str(quad))
         elif isinstance(quad, QJump):
-            self.code.append('    jmp {}'.format(quad.name))
+            self.code.append('    {} {}'.format(quad.op, quad.name))
         elif isinstance(quad, QEmpty):
             return
+        elif isinstance(quad, QCmp):
+            loc1 = self.to_mem(quad.val1)
+            loc2 = self.to_mem(quad.val2)
+
+            self.code.append('    movl {}, %eax'.format(loc1))
+            self.code.append('    movl {}, %edx'.format(loc2))
+            self.code.append('    cmp %edx, %eax')
         else:
             self.debug("Not handled " + quad + '\n')
 
