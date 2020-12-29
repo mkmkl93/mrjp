@@ -73,11 +73,13 @@ class Code4:
                 arg_name = args.ID(i).getText()
 
                 if i < 6:
-                    loc = registers[i]
+                    reg = registers[i]
+                    arg_loc = block.give_var_name()
+                    block.add_quad(QEq(arg_loc, reg))
                 else:
-                    loc = '{}(%rbp)'.format(16 + 4 * (i - 6))
+                    arg_loc = '{}(%rbp)'.format(16 + 4 * (i - 6))
 
-                self.envs[-1][arg_name] = Var(arg_typ, loc=loc)
+                self.envs[-1][arg_name] = Var(arg_typ, loc=arg_loc)
 
         block = self.enter_block(ctx_block, block)
 
@@ -216,7 +218,7 @@ class Code4:
             return VString(ctx.STR().getText(), loc=var_name), block
         elif isinstance(ctx, LatteParser.EParenContext):
             return self.enter_expr(ctx.expr(), block)
-        elif isinstance(ctx, (LatteParser.EAndContext, LatteParser.EOrContext, LatteParser.EOrContext)):
+        elif isinstance(ctx, (LatteParser.EAndContext, LatteParser.EOrContext, LatteParser.EOrContext, LatteParser.ERelOpContext)):
             label1 = block.give_label()
             label2 = block.give_label()
             label3 = block.give_label()

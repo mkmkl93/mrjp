@@ -192,8 +192,8 @@ class FrontEnd:
             exp = ctx.expr()
             var_exp = self.enter_expr(exp)
 
-            if ctx.children[0] == '-' and var_exp.type != "int" or \
-                    ctx.children[0] == '!' and var_exp.type != "boolean":
+            if ctx.children[0].getText() == '-' and var_exp.type != "int" or \
+                    ctx.children[0].getText() == '!' and var_exp.type != "boolean":
                 self.error(ctx, "Mismatch in types in unary operator")
 
             return Var(var_exp.type)
@@ -343,7 +343,7 @@ class FrontEnd:
         if exp_val.value == 'false':
             return
 
-        if exp_val.value == 'true' and isinstance(ctx.stmt(), LatteParser.DeclContext):
+        if isinstance(ctx.stmt(), LatteParser.DeclContext):
             self.error(ctx, 'Cannot declare variable here')
 
         self.envs.append({})

@@ -79,7 +79,7 @@ class Machine:
         elif isinstance(quad, QFunEnd):
             return
         elif isinstance(quad, QEq):
-            if quad.val2[0] == '"':
+            if quad.val2 == '' or quad.val2[0] == '"':
                 self.strings.append((quad.val1 + '__str', quad.val2))
                 loc1 = self.to_mem(quad.val1)
 

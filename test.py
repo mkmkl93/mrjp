@@ -70,8 +70,8 @@ def check_bad():
         if file.endswith('.lat'):
             good = False
             process = subprocess.run(['./latc_ARCH', dir_path + 'bad/' + file], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE, shell=False)
-            if process.returncode == 0:
+                                     stderr=subprocess.PIPE, shell=False, encoding='utf-8')
+            if process.returncode == 0 or process.stdout.endswith('runtime error\n'):
                 good = True
 
             # print(process.stdout.decode("utf-8"))
@@ -95,27 +95,33 @@ def check_specific(choice, number):
                              stderr=subprocess.PIPE)
     print(process.stdout.decode("utf-8"))
     process = subprocess.run(['./latc_ARCH', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, shell=False)
-    print('stdout: \n' + process.stdout.decode("utf-8"))
-    print('stderr: ' + process.stderr.decode("utf-8"))
-
-    if os.path.isfile('./' + dir_path + basename + '.input'):
-        with open(dir_path + basename + '.input') as file:
-            ins = ''.join([x for x in file])
-    else:
-        ins = ''
-
-    process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins)
-    print('stdout: ' + process.stdout)
+                             stderr=subprocess.PIPE, shell=False, encoding='utf-8')
+    print('stdout: \n' + process.stdout)
     print('stderr: ' + process.stderr)
-    print('return code:' + str(process.returncode))
 
-    with open(dir_path + basename + '.output') as file:
-        file_content = ''.join([x for x in file])
-        process_output = str(process.stdout)
+    if 'good' in choice:
+        if os.path.isfile('./' + dir_path + basename + '.input'):
+            with open(dir_path + basename + '.input') as file:
+                ins = ''.join([x for x in file])
+        else:
+            ins = ''
 
-        if file_content != process_output or (process.returncode != 0 and not process.stdout.endswith('runtime error\n')):
+        process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins)
+        print('stdout: ' + process.stdout)
+        print('stderr: ' + process.stderr)
+        print('return code:' + str(process.returncode))
+
+        with open(dir_path + basename + '.output') as file:
+            file_content = ''.join([x for x in file])
+            process_output = str(process.stdout)
+
+            if file_content != process_output or (process.returncode != 0 and not process.stdout.endswith('runtime error\n')):
+                print("\033[91m" + basename + "\033[0m")
+            else:
+                print("\033[92m" + basename + "\033[0m")
+    else:
+        if process.returncode == 0 or process.stdout.endswith('runtime error\n'):
             print("\033[91m" + basename + "\033[0m")
         else:
             print("\033[92m" + basename + "\033[0m")

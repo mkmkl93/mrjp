@@ -56,8 +56,8 @@ def main(argv):
     code4 = Code4(FLAGS['debug'].value)
     machine = Machine(FLAGS['debug'].value)
 
-    prog_tree = simplifier.simplify(prog_tree)
     front_end.enter_program(prog_tree)
+    prog_tree = simplifier.simplify(prog_tree)
 
     blocks = code4.enter_program(prog_tree)
     for block in blocks:
@@ -74,7 +74,6 @@ def main(argv):
         for line in machine.code:
             output.write(line + '\n')
 
-    # #'clang -g lib/runtime.s lattests/good/core052.s -o lattests/good/core052 && ./lattests/good/core052'
     process = subprocess.run(['clang', '-g', 'lib/runtime.c', output_file, '-o' + output_file_base],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, encoding='utf-8')
 
