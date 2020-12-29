@@ -21,6 +21,9 @@ class Machine:
         if var.isnumeric():
             return '${}'.format(int(var))
 
+        if re.match(r'(\d+).*', var):
+            return var
+
         m = re.match(r'.*_t(\d*)', var)
         return '-{}(%rbp)'.format(4 * int(m.group(1)))
 
@@ -41,6 +44,9 @@ class Machine:
         self.code.append('')
 
     def add_strings(self):
+        if not self.strings:
+            return
+
         code_tmp = self.code
         self.code = []
 
@@ -69,6 +75,7 @@ class Machine:
             self.code.append('    push %rbp')
             self.code.append('    mov %rsp, %rbp')
             self.code.append('    sub ${}, %rsp'.format(4 * (quad.val + 1)))
+            self.code.append('    and $-16, %rsp')
         elif isinstance(quad, QFunEnd):
             return
         elif isinstance(quad, QEq):
@@ -100,7 +107,9 @@ class Machine:
                 arg_loc = self.to_mem(arg)
                 self.code.append('    movl {}, %{}'.format(arg_loc, reg))
 
-            self.code.append('    push %rbp')
+            if quad.name in ['readInt', 'readString']:
+                self.code.append('    and $-16, %rsp')
+
             self.code.append('    call {}'.format(quad.name))
 
             self.code.append('    add ${}, %rsp'.format(4 * max(len(quad.args) - 6, 0)))
@@ -112,11 +121,19 @@ class Machine:
 
             if quad.op == '-':
                 op = 'neg'
+            elif quad.op == '!':
+                op = 'xor'
+            elif quad.op == '--':
+                op = 'dec'
             else:
-                op = 'not'
+                op = 'inc'
 
             self.code.append('    movl {}, %eax'.format(val_loc))
-            self.code.append('    {} %eax'.format(op))
+
+            if op == 'xor':
+                self.code.append('    xorl $1, %eax')
+            else:
+                self.code.append('    {} %eax'.format(op))
             self.code.append('    movl %eax, {}'.format(res_loc))
         elif isinstance(quad, QBinOp):
             res_loc = self.to_mem(quad.res)

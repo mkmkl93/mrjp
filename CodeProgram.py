@@ -8,24 +8,19 @@ class Block:
         self.label_counter = 0
 
     def give_var_name(self):
-        self.var_counter += 1
-        return '{}_t{}'.format(self.name, self.var_counter)
+        pass
 
     def give_block_name(self):
-        self.block_counter += 1
-        return '{}_b{}'.format(self.name, self.block_counter)
+        pass
 
     def give_while_number(self):
-        self.while_counter += 1
-        return self.while_counter
+        pass
 
     def give_if_number(self):
-        self.if_counter += 1
-        return self.if_counter
+        pass
 
     def give_label(self):
-        self.label_counter += 1
-        return '{}_l{}'.format(self.name, self.label_counter)
+        pass
 
     def add_quad(self, quad):
         pass
@@ -54,6 +49,26 @@ class BigBlock(Block):
         self.blocks.append(SmallBlock(self.give_block_name()))
         return self
 
+    def give_var_name(self):
+        self.var_counter += 1
+        return '{}_t{}'.format(self.name, self.var_counter)
+
+    def give_block_name(self):
+        self.block_counter += 1
+        return '{}_b{}'.format(self.name, self.block_counter)
+
+    def give_label(self):
+        self.label_counter += 1
+        return '{}_l{}'.format(self.name, self.label_counter)
+
+    def give_while_number(self):
+        self.while_counter += 1
+        return self.while_counter
+
+    def give_if_number(self):
+        self.if_counter += 1
+        return self.if_counter
+
     def limit_locals(self, limit):
         self.blocks[0].limit_locals(limit)
 
@@ -62,9 +77,10 @@ class BigBlock(Block):
 
 
 class SmallBlock(Block):
-    def __init__(self, name):
+    def __init__(self, name, block=None):
         super().__init__(name)
         self.quads = []
+        self.big_brother = block
 
     def add_quad(self, quad):
         self.quads.append(quad)
@@ -73,6 +89,41 @@ class SmallBlock(Block):
         big_block = BigBlock(self)
         big_block.add_block(block)
         return big_block
+
+    def give_var_name(self):
+        if self.big_brother is not None:
+            return self.big_brother.give_var_name()
+        else:
+            self.var_counter += 1
+            return '{}_t{}'.format(self.name, self.var_counter)
+
+    def give_block_name(self):
+        if self.big_brother is not None:
+            return self.big_brother.give_block_name()
+        else:
+            self.block_counter += 1
+            return '{}_b{}'.format(self.name, self.block_counter)
+
+    def give_label(self):
+        if self.big_brother is not None:
+            return self.big_brother.give_var_name()
+        else:
+            self.label_counter += 1
+            return '{}_l{}'.format(self.name, self.label_counter)
+
+    def give_while_number(self):
+        if self.big_brother is not None:
+            return self.big_brother.give_var_name()
+        else:
+            self.while_counter += 1
+            return self.while_counter
+
+    def give_if_number(self):
+        if self.big_brother is not None:
+            return self.big_brother.give_var_name()
+        else:
+            self.if_counter += 1
+            return self.if_counter
 
     def limit_locals(self, limit):
         self.quads[0] = QFunBegin(str(self.quads[0]), limit)

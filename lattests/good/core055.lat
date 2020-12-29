@@ -1,0 +1,7 @@
+/* test input */
+
+int main() {
+  string x = readString();
+  printString(x);
+  return 0 ;
+}

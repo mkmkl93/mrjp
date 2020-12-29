@@ -6,7 +6,6 @@ int main() {
 
 int foo(int a,int b,int c,int d,int e,int f,int g,
         int h,int i,int j,int k,int l,int m, int n) {
-	
   int r = (2*a+b/2+c+d+e+f+g+h+i+j/2+k+l+m+n)%10;
   printInt(r);
   return r;

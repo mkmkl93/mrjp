@@ -11,7 +11,7 @@ def check_dir():
 
 
 def check_good():
-    list = ['000', '045', '025', '028', '011', '020', '030', '021', '053', '037', '050', '031', '046', '035', '049', '036', '044', '038', '004', '027', '041', '007', '022', '042', '002', '009', '043', '029', '033', '048', '018', '006', '024', '005', '008', '003', '014', '016', '010', '015', '047', '039', '023', '026', '019', '034', '032', '012', '013', '017', '040', '001']
+    list = ['000', '045', '025', '028', '011', '020', '030', '021', '053', '037', '050', '054', '055', '031', '046', '035', '049', '036', '044', '038', '004', '027', '041', '007', '022', '042', '002', '009', '043', '029', '033', '048', '018', '006', '024', '005', '008', '003', '014', '016', '010', '015', '047', '039', '023', '026', '019', '034', '032', '012', '013', '017', '040', '001']
     count = 0
     for number in list:
         file_name = 'core{}.lat'.format(number)
@@ -29,14 +29,20 @@ def check_good():
                 good = False
 
             if os.path.isfile(file_path[:-4]):
+                if os.path.isfile(file_path[:-4] + '.input'):
+                    with open(file_path[:-4] + '.input') as file:
+                        ins = ''.join([x for x in file])
+                else:
+                    ins = ''
+
                 try:
                     process = subprocess.run([file_path[:-4]], stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE, shell=False, encoding='utf-8', timeout=1)
+                                           stderr=subprocess.PIPE, shell=False, encoding='utf-8', timeout=1, input=ins)
                 except subprocess.TimeoutExpired:
                     process.returncode = -1
                     print('timeout')
 
-                if process.returncode != 0:
+                if process.returncode != 0 and not process.stdout.endswith('runtime error\n'):
                     good = False
                 else:
                     with open(file_path[:-4] + '.output') as file2:
@@ -93,17 +99,23 @@ def check_specific(choice, number):
     print('stdout: \n' + process.stdout.decode("utf-8"))
     print('stderr: ' + process.stderr.decode("utf-8"))
 
+    if os.path.isfile('./' + dir_path + basename + '.input'):
+        with open(dir_path + basename + '.input') as file:
+            ins = ''.join([x for x in file])
+    else:
+        ins = ''
+
     process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, shell=False)
-    print('stdout: ' + process.stdout.decode("utf-8"))
-    print('stderr: ' + process.stderr.decode("utf-8"))
+                             stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins)
+    print('stdout: ' + process.stdout)
+    print('stderr: ' + process.stderr)
     print('return code:' + str(process.returncode))
 
     with open(dir_path + basename + '.output') as file:
         file_content = ''.join([x for x in file])
-        process_output = str(process.stdout.decode('utf-8'))
+        process_output = str(process.stdout)
 
-        if file_content != process_output or process.returncode != 0:
+        if file_content != process_output or (process.returncode != 0 and not process.stdout.endswith('runtime error\n')):
             print("\033[91m" + basename + "\033[0m")
         else:
             print("\033[92m" + basename + "\033[0m")

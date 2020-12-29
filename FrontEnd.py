@@ -73,7 +73,8 @@ class FrontEnd:
     def check_for_return_unknown(self, ctx) -> bool:
         if isinstance(ctx, LatteParser.BlockStmtContext):
             return self.check_for_return_block(ctx.block())
-        return False
+        else:
+            return self.check_for_return_stmt(ctx)
 
     def check_for_return_stmt(self, ctx: LatteParser.StmtContext) -> bool:
         if isinstance(ctx, (LatteParser.VRetContext, LatteParser.RetContext)):
@@ -96,15 +97,13 @@ class FrontEnd:
                 return True
         elif isinstance(ctx, LatteParser.WhileContext):
             return self.check_for_return_unknown(ctx.stmt())
-        else:
-            return self.check_for_return_unknown(ctx)
 
     def check_for_return_block(self, ctx: LatteParser.BlockContext) -> bool:
         for stmt in reversed(ctx.children):
             if isinstance(stmt, antlr4.TerminalNode):
                 continue
             elif isinstance(stmt, LatteParser.StmtContext):
-                return self.check_for_return_stmt(stmt)
+                return self.check_for_return_unknown(stmt)
             else:
                 return False
 

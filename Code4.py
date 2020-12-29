@@ -75,7 +75,7 @@ class Code4:
                 if i < 6:
                     loc = registers[i]
                 else:
-                    loc = '{}(%rbp)'.format(8 + 4 * (i - 6))
+                    loc = '{}(%rbp)'.format(16 + 4 * (i - 6))
 
                 self.envs[-1][arg_name] = Var(arg_typ, loc=loc)
 
@@ -214,8 +214,24 @@ class Code4:
 
             block.add_quad(quad)
             return VString(ctx.STR().getText(), loc=var_name), block
-        # elif isinstance(ctx, LatteParser.EParenContext):
-        #     return self.enter_expr(ctx.expr())
+        elif isinstance(ctx, LatteParser.EParenContext):
+            return self.enter_expr(ctx.expr(), block)
+        elif isinstance(ctx, (LatteParser.EAndContext, LatteParser.EOrContext, LatteParser.EOrContext)):
+            label1 = block.give_label()
+            label2 = block.give_label()
+            label3 = block.give_label()
+            var_name = block.give_var_name()
+
+            block = self.enter_lazy_expr(ctx, block, label1, label2)
+
+            block.add_quad(QLabel(label1))
+            block.add_quad(QEq(var_name, '1'))
+            block.add_quad(QJump('jmp', label3))
+            block.add_quad(QLabel(label2))
+            block.add_quad(QEq(var_name, '0'))
+            block.add_quad(QLabel(label3))
+
+            return VBool(None, var_name), block
         else:
             self.error(ctx, "Unresolved instance in enter_expr")
 
@@ -261,6 +277,7 @@ class Code4:
             label = block.give_label()
 
             block = self.enter_lazy_expr(exp1, block, pos_label, label)
+            block.add_quad(QJump('jmp', pos_label))
             block.add_quad(QLabel(label))
             block = self.enter_lazy_expr(exp2, block, pos_label, neg_label)
         elif isinstance(ctx, LatteParser.ERelOpContext):
@@ -289,6 +306,12 @@ class Code4:
             block.add_quad(QJump(op, neg_label))
         elif isinstance(ctx, LatteParser.EParenContext):
             block = self.enter_lazy_expr(ctx.expr(), block, pos_label, neg_label)
+        else:
+            var, block = self.enter_expr(ctx, block)
+
+            block.add_quad(QCmp(var.loc, '1'))
+            block.add_quad(QJump('jne', neg_label))
+            block.add_quad(QJump('jmp', pos_label))
         return block
 
     def enter_ass(self, ctx: LatteParser.AssContext, block) -> Block:
@@ -296,36 +319,32 @@ class Code4:
         exp = ctx.expr()
 
         val_exp, block = self.enter_expr(exp, block)
-        val_name = block.give_var_name()
 
         for env in self.envs[::-1]:
             if var_name in env:
-                env[var_name].loc = val_name
-
-        block.add_quad(QEq(val_name, val_exp.loc))
+                block.add_quad(QEq(env[var_name].loc, val_exp.loc))
+                break
 
         return block
-    #
-    # def enter_incr(self, ctx: LatteParser.IncrContext) -> None:
-    #     var_name = ctx.ID().getText()
-    #
-    #     for env in self.envs[::-1]:
-    #         if var_name in env:
-    #             if env[var_name].type != 'int':
-    #                 self.error(ctx, "Incorrect type\nExpected " + env[var_name].type + " got int")
-    #             else:
-    #                 return
-    #
-    # def enter_decr(self, ctx: LatteParser.DecrContext) -> None:
-    #     var_name = ctx.ID().getText()
-    #
-    #     for env in self.envs[::-1]:
-    #         if var_name in env:
-    #             if env[var_name].type != 'int':
-    #                 self.error(ctx, "Incorrect type\nExpected " + env[var_name].type + " got int")
-    #             else:
-    #                 return
-    #
+
+    def enter_incr(self, ctx: LatteParser.IncrContext, block) -> Block:
+        var_name = ctx.ID().getText()
+
+        for env in self.envs[::-1]:
+            if var_name in env:
+                name = block.give_var_name()
+                block.add_quad(QUnOp(env[var_name].loc, '++', env[var_name].loc))
+                return block
+
+    def enter_decr(self, ctx: LatteParser.DecrContext, block) -> Block:
+        var_name = ctx.ID().getText()
+
+        for env in self.envs[::-1]:
+            if var_name in env:
+                name = block.give_var_name()
+                block.add_quad(QUnOp(env[var_name].loc, '--', env[var_name].loc))
+                return block
+
     def enter_cond(self, ctx: LatteParser.CondContext, block: Block) -> Block:
         condition = ctx.expr()
         if_number = block.give_if_number()
@@ -373,7 +392,7 @@ class Code4:
             self.envs.append({})
 
             name = block.give_block_name()
-            rec_block = self.enter_block(ctx, SmallBlock(name))
+            rec_block = self.enter_block(ctx, SmallBlock(name, block))
             block = block.add_block(rec_block)
 
             self.envs.pop()
@@ -382,10 +401,10 @@ class Code4:
             return self.enter_decl(ctx, block)
         elif isinstance(ctx, LatteParser.AssContext):
             return self.enter_ass(ctx, block)
-        # elif isinstance(ctx, LatteParser.IncrContext):
-        #     self.enter_incr(ctx)
-        # elif isinstance(ctx, LatteParser.DecrContext):
-        #     self.enter_decr(ctx)
+        elif isinstance(ctx, LatteParser.IncrContext):
+            return self.enter_incr(ctx, block)
+        elif isinstance(ctx, LatteParser.DecrContext):
+            return self.enter_decr(ctx, block)
         elif isinstance(ctx, LatteParser.RetContext):
             return self.enter_ret(ctx, block)
         elif isinstance(ctx, LatteParser.VRetContext):

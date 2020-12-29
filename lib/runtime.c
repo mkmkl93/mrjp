@@ -17,7 +17,7 @@ void error() {
 
 int readInt() {
     int x;
-    scanf("%d", &x);
+    scanf("%d\n", &x);
     return x;
 }
 
@@ -26,14 +26,14 @@ char* readString() {
     size_t len = 0;
     size_t read;
     if ((read = getline(&line, &len, stdin)) != -1) {
-        char* cleanedLine = (char*) malloc(len + 1);
-        for (int i = 0; i < strlen(line); i++) {
-            cleanedLine[i] = line[i];
-        }
+        len = strlen(line);
+        char* cleanedLine = (char*) malloc(len);
+        memcpy(cleanedLine, line, len);
         cleanedLine[len - 1] = '\0';
         return cleanedLine;
     } else {
         error();
+        exit(1); // pointless but for the sake of warning
     }
 }
 
