@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 
-dir_path = "lattests/"
+dir_path = "lattests"
 
 
 def check_dir():
@@ -66,7 +66,7 @@ def check_good():
 
 
 def check_bad():
-    for file in os.listdir(dir_path + 'bad/'):
+    for file in os.listdir(dir_path + '/bad/'):
         if file.endswith('.lat'):
             good = False
             process = subprocess.run(['./latc_ARCH', dir_path + 'bad/' + file], stdout=subprocess.PIPE,
