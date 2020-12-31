@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 1:0[0m
+No int main declared
+[94mvoid main() {
+[0m[94m}[0m
