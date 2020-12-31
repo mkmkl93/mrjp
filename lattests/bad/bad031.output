@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 4:4[0m
+Mismatch in types in unary operator
+[94m    -i;
+[0m

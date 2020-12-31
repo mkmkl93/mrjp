@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 2:5[0m
+Returning wrong type
+Expected int got boolean
+[94m     return true;
+[0m

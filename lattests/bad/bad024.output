@@ -1,0 +1,8 @@
+ERROR
+[91mCompilation error at 5:0[0m
+No return statement in every possible branch
+[94mint f(int x) {
+[0m[94m    if (x<0) 
+[0m[94m       return x;
+[0m[94m}
+[0m

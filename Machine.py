@@ -52,6 +52,8 @@ class Machine:
 
         self.code.append('.data')
         for label, val in self.strings:
+            if val == '':
+                val = '""'
             self.code.append('    {}: .string {}'.format(label, val))
 
         self.code.extend(code_tmp)
@@ -75,7 +77,8 @@ class Machine:
             self.code.append('    push %rbp')
             self.code.append('    mov %rsp, %rbp')
             self.code.append('    sub ${}, %rsp'.format(4 * (quad.val + 1)))
-            self.code.append('    and $-16, %rsp')
+            if quad.name == 'main':
+                self.code.append('    and $-16, %rsp')
         elif isinstance(quad, QFunEnd):
             return
         elif isinstance(quad, QEq):
@@ -99,7 +102,7 @@ class Machine:
             self.add_epilog()
             self.code.append('    ret')
         elif isinstance(quad, QFunCall):
-            for arg in quad.args[:6:-1]:
+            for arg in quad.args[:5:-1]:
                 arg_loc = self.to_mem(arg)
                 self.code.append('    push {}'.format(arg_loc))
 

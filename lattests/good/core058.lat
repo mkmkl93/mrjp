@@ -1,0 +1,8 @@
+int main() {
+  myPrint();
+  return 0;
+}
+
+void myPrint() {
+  printInt(125);
+}

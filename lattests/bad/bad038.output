@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 4:6[0m
+Cannot subtract strings
+[94m  x = "asd" - "ewq";
+[0m

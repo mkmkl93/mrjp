@@ -1,0 +1,7 @@
+ERROR
+[91mCompilation error at 4:0[0m
+No int main declared
+[94mvoid main() {
+[0m[94m	return 0 ;
+[0m[94m}
+[0m

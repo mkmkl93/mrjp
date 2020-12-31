@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 4:6[0m
+Mismatch in types of comparison
+[94m  if ("true" == true) {
+[0m

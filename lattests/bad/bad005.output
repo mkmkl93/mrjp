@@ -1,0 +1,4 @@
+ERROR
+[91mSyntax error at 1:0[0m
+foo
+mismatched input 'foo' expecting {'int', 'string', 'boolean', 'void'}

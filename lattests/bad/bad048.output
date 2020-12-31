@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 3:12[0m
+Mismatch in types in unary operator
+[94m    int x = !4;
+[0m

@@ -1,0 +1,4 @@
+ERROR
+[91mSyntax error at 3:7[0m
+int
+no viable alternative at input 'if(int'

@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 5:2[0m
+Incorrect type of assignment
+Expected int got string
+[94m  x = "foo"+"bar";
+[0m

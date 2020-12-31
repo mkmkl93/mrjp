@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 3:4[0m
+Number too large
+[94m    int i = 999999999999999999999999999999999999999999999999999999999999;
+[0m

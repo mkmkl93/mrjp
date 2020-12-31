@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 5:3[0m
+Void cannot be type of an argument
+[94m   void x;
+[0m

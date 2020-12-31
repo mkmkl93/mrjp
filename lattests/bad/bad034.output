@@ -1,0 +1,7 @@
+ERROR
+[91mCompilation error at 8:0[0m
+Redefinition of function printInt
+[94mvoid printInt(int x) {
+[0m[94m    
+[0m[94m}
+[0m

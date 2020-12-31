@@ -1,0 +1,12 @@
+int main() {
+// Tego w jezyku nie ma
+//  if ("blah" != "blah1") {
+//    printString("neq strings OK 1");
+//  }
+//  if ("blah" != "blah") {
+//
+//  } else {
+//    printString("neq strings OK 2");
+//  }
+  return 0;
+}

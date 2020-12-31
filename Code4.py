@@ -2,7 +2,6 @@ from typing import List
 
 import antlr4
 import sys
-from antlr.LatteParser import LatteParser
 from utils import *
 
 
@@ -77,7 +76,7 @@ class Code4:
                     arg_loc = block.give_var_name()
                     block.add_quad(QEq(arg_loc, reg))
                 else:
-                    arg_loc = '{}(%rbp)'.format(16 + 4 * (i - 6))
+                    arg_loc = '{}(%rbp)'.format(16 + 8 * (i - 6))
 
                 self.envs[-1][arg_name] = Var(arg_typ, loc=arg_loc)
 

@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 3:4[0m
+Cannot declare variable here
+[94m    if(true)
+[0m[94m        int a;
+[0m

@@ -25,10 +25,11 @@ char* readString() {
     char* line = NULL;
     size_t len = 0;
     size_t read;
+
     if ((read = getline(&line, &len, stdin)) != -1) {
         len = strlen(line);
         char* cleanedLine = (char*) malloc(len);
-        memcpy(cleanedLine, line, len);
+        memcpy(cleanedLine, line, len - 1);
         cleanedLine[len - 1] = '\0';
         return cleanedLine;
     } else {

@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 3:10[0m
+Not all elements are of the same type
+[94m      x = "pi" + 1 ;
+[0m

@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 3:16[0m
+Returning wrong type
+Expected int got void
+[94m                return;
+[0m

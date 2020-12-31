@@ -1,0 +1,8 @@
+ERROR
+[91mCompilation error at 1:0[0m
+No return statement in every possible branch
+[94mint main() {
+[0m[94m    if (false) 
+[0m[94m       return 0;
+[0m[94m}
+[0m

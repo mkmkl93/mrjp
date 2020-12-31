@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 6:12[0m
+Mismatch in types of comparison
+[94m        if (x == "exit")
+[0m

@@ -1,0 +1,7 @@
+ERROR
+[91mCompilation error at 4:0[0m
+Main function cannot take arguments
+[94mint main(int y) {
+[0m[94m	return 0 ;
+[0m[94m}
+[0m

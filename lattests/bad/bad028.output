@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 8:0[0m
+Void cannot be type of a variable
+[94mint f(void x) {
+[0m[94m   return 2;
+[0m[94m}[0m

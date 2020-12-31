@@ -1,0 +1,8 @@
+ERROR
+[91mCompilation error at 12:0[0m
+Redefinition of function foo
+[94mint foo(int x) {
+[0m[94m    x = x + 1;
+[0m[94m    return x - 5;
+[0m[94m}
+[0m

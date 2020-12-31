@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 6:0[0m
+No return statement in every possible branch
+[94mint foo(boolean b) { b = true; }
+[0m

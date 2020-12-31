@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 3:8[0m
+Variable already declared: x
+[94m        int x;
+[0m

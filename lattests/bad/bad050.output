@@ -1,0 +1,8 @@
+ERROR
+[91mCompilation error at 2:0[0m
+No return statement in every possible branch
+[94mint main() {
+[0m[94m    while(true) {
+[0m[94m    }
+[0m[94m}
+[0m

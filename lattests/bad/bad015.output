@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 4:1[0m
+Not found function with given types of attributes
+[94m	printString(1);
+[0m

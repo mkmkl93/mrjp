@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 4:1[0m
+Mismatch in types
+Expected string got int
+[94m string x = 1;
+[0m

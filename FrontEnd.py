@@ -70,15 +70,16 @@ class FrontEnd:
             self.error(ctx, "Redefinition of function " + name)
         self.envs[-1][name] = VFunction(args, typ)
 
-    def check_for_return_unknown(self, ctx) -> bool:
+    def check_for_return_unknown(self, ctx) -> int:
         if isinstance(ctx, LatteParser.BlockStmtContext):
             return self.check_for_return_block(ctx.block())
         else:
             return self.check_for_return_stmt(ctx)
 
-    def check_for_return_stmt(self, ctx: LatteParser.StmtContext) -> bool:
+    # 0 - None, 1 - 1, 2 - both or always
+    def check_for_return_stmt(self, ctx: LatteParser.StmtContext) -> int:
         if isinstance(ctx, (LatteParser.VRetContext, LatteParser.RetContext)):
-            return True
+            return 2
         elif isinstance(ctx, LatteParser.CondElseContext):
             stmt1 = ctx.stmt(0)
             stmt2 = ctx.stmt(1)
@@ -89,16 +90,31 @@ class FrontEnd:
             if ctx.expr().getText() == 'true':
                 return self.check_for_return_unknown(stmt1)
 
-            return self.check_for_return_unknown(stmt1) and self.check_for_return_unknown(stmt2)
+            if_val = self.check_for_return_unknown(stmt1)
+            else_val = self.check_for_return_unknown(stmt2)
+
+            if_val = max(0, if_val - 1)
+            else_val = max(0, else_val - 1)
+            ret_val = if_val + else_val
+
+            return ret_val
         elif isinstance(ctx, LatteParser.CondContext) and ctx.expr().getText() == 'true':
             stmt_true = ctx.stmt()
 
             if self.check_for_return_unknown(stmt_true):
-                return True
+                return 2
         elif isinstance(ctx, LatteParser.WhileContext):
-            return self.check_for_return_unknown(ctx.stmt())
+            ret = self.check_for_return_unknown(ctx.stmt())
 
-    def check_for_return_block(self, ctx: LatteParser.BlockContext) -> bool:
+            if ctx.expr().getText() == 'true' and ret == 1:
+                ret = 2
+
+            return ret
+        else:
+            return 0
+
+
+    def check_for_return_block(self, ctx: LatteParser.BlockContext) -> int:
         for stmt in reversed(ctx.children):
             if isinstance(stmt, antlr4.TerminalNode):
                 continue

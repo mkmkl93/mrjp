@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 3:8[0m
+Incorrect type of assignment
+Expected int got boolean
+[94m        x = true;
+[0m

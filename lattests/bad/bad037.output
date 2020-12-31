@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 4:4[0m
+Incorrect type
+Expected string got int
+[94m    a++;
+[0m

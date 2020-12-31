@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 2:8[0m
+Variable not declared: x
+[94m        x = 14;
+[0m

@@ -1,0 +1,5 @@
+ERROR
+[91mCompilation error at 9:4[0m
+Returning something in void unction
+[94m    return g();
+[0m
