@@ -6,6 +6,8 @@ class Block:
         self.while_counter = 0
         self.if_counter = 0
         self.label_counter = 0
+        self.following_blocks = []
+        self.previous_blocks = []
 
     def give_var_name(self):
         pass
@@ -72,8 +74,14 @@ class BigBlock(Block):
     def limit_locals(self, limit):
         self.blocks[0].limit_locals(limit)
 
+    def add_following_block(self, block):
+        self.following_blocks.append(block)
+
+    def add_previous_block(self, block):
+        self.previous_blocks.append(block)
+
     def __str__(self):
-        return '\n'.join(str(x) for x in self.blocks)
+        return 'Block ' + self.name + '\n'.join(str(x) for x in self.blocks)
 
 
 class SmallBlock(Block):
@@ -132,10 +140,11 @@ class SmallBlock(Block):
         if not self.quads:
             return ''
         else:
-            return self.name + ':\n' + '\n'.join([str(x) for x in self.quads])
+            return 'Block ' + str(self.name) + ':\n' + '\n'.join([str(x) for x in self.quads])
 
 class Quad:
     def __init__(self):
+        self.alive = {}
         pass
 
 

@@ -115,7 +115,7 @@ class Machine:
 
             self.code.append('    call {}'.format(quad.name))
 
-            self.code.append('    add ${}, %rsp'.format(4 * max(len(quad.args) - 6, 0)))
+            self.code.append('    add ${}, %rsp'.format(8 * max(len(quad.args) - 6, 0)))
             res_loc = self.to_mem(quad.val)
             self.code.append('    movl %eax, {}'.format(res_loc))
         elif isinstance(quad, QUnOp):

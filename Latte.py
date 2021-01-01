@@ -9,6 +9,7 @@ from Simplifier import Simplifier
 from FrontEnd import FrontEnd
 from Code4 import Code4
 from Machine import Machine
+from Optimiser import Optimiser
 from antlr.LatteLexer import LatteLexer
 from antlr.LatteParser import LatteParser
 from antlr4.error.ErrorListener import ErrorListener
@@ -55,6 +56,7 @@ def main(argv):
     front_end = FrontEnd(input_file, FLAGS['debug'].value)
     code4 = Code4(FLAGS['debug'].value)
     machine = Machine(FLAGS['debug'].value)
+    optimiser = Optimiser(FLAGS['debug'].value)
 
     front_end.enter_program(prog_tree)
     prog_tree = simplifier.simplify(prog_tree)
@@ -64,7 +66,12 @@ def main(argv):
         debug(block)
     debug('')
 
-    machine.translate(blocks)
+    block_optimised = optimiser.optimise(blocks)
+    for block in block_optimised:
+        debug(block)
+    debug('')
+
+    machine.translate(block_optimised)
     for i in machine.code:
         debug(i)
 
