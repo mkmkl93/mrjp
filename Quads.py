@@ -24,14 +24,14 @@ class Quad:
         self.code = []
 
     def __str__(self):
-        delimeter = '\n' + (' ' * 24)
+        delimeter = '\n' + (' ' * 60)
 
         return '{}'.format(str(self.alive)) + delimeter.join([''] + self.code)
 
 
 class QEmpty(Quad):
     def __str__(self):
-        return 'QEmpty'.ljust(20) + super().__str__()
+        return 'QEmpty'.ljust(40) + super().__str__()
 
 
 class QLabel(Quad):
@@ -39,7 +39,7 @@ class QLabel(Quad):
         self.name = name
 
     def __str__(self):
-        return '{}:'.format(self.name).ljust(20) + super().__str__()
+        return '{}:'.format(self.name).ljust(40) + super().__str__()
 
 
 class QJump(Quad):
@@ -48,7 +48,7 @@ class QJump(Quad):
         self.name = name
 
     def __str__(self):
-        return '{} {}'.format(self.op, self.name).ljust(20) + super().__str__()
+        return '{} {}'.format(self.op, self.name).ljust(40) + super().__str__()
 
 
 class QCmp(Quad):
@@ -57,7 +57,7 @@ class QCmp(Quad):
         self.val2 = val2
 
     def __str__(self):
-        return 'cmp {}, {}'.format(self.val1, self.val2).ljust(20) + super().__str__()
+        return 'cmp {}, {}'.format(self.val1, self.val2).ljust(40) + super().__str__()
 
 
 class QReturn(Quad):
@@ -69,7 +69,7 @@ class QReturn(Quad):
         if self.val is None:
             return 'return {}'.format(super().__str__())
         else:
-            return 'return {}'.format(self.val).ljust(20) + super().__str__()
+            return 'return {}'.format(self.val).ljust(40) + super().__str__()
 
 
 class QEq(Quad):
@@ -79,7 +79,7 @@ class QEq(Quad):
         self.val2 = val2
 
     def __str__(self):
-        return '{} = {}'.format(self.val1, self.val2).ljust(20) + super().__str__()
+        return '{} = {}'.format(self.val1, self.val2).ljust(40) + super().__str__()
 
 
 class QFunBegin(Quad):
@@ -92,7 +92,7 @@ class QFunBegin(Quad):
         if self.val is None:
             return '{}'.format(self.name)
         else:
-            return '{}__begin {}'.format(self.name, self.val).ljust(20) + super().__str__()
+            return '{}__begin {}'.format(self.name, self.val).ljust(40) + super().__str__()
 
 
 class QFunEnd(Quad):
@@ -101,7 +101,7 @@ class QFunEnd(Quad):
         self.name = name
 
     def __str__(self):
-        return '{}__end'.format(self.name).ljust(20) + super().__str__()
+        return '{}__end'.format(self.name).ljust(40) + super().__str__()
 
 
 class QFunCall(Quad):
@@ -113,9 +113,9 @@ class QFunCall(Quad):
 
     def __str__(self):
         if self.val is None:
-            return 'call {} {}'.format(self.name, ' '.join(self.args)).ljust(20) + super().__str__()
+            return 'call {} {}'.format(self.name, ' '.join(self.args)).ljust(40) + super().__str__()
         else:
-            return '{} = call {} {}'.format(self.val, self.name, ' '.join(self.args)).ljust(20) + super().__str__()
+            return '{} = call {} {}'.format(self.val, self.name, ' '.join(self.args)).ljust(40) + super().__str__()
 
 
 class QBinOp(Quad):
@@ -128,7 +128,7 @@ class QBinOp(Quad):
         self.typ = typ
 
     def __str__(self):
-        return '{} = {} {} {} ({})'.format(self.res, self.val1, self.op, self.val2, self.typ).ljust(20) + super().__str__()
+        return '{} = {} {} {} ({})'.format(self.res, self.val1, self.op, self.val2, self.typ).ljust(40) + super().__str__()
 
 
 class QUnOp(Quad):
@@ -139,4 +139,4 @@ class QUnOp(Quad):
         self.val = val
 
     def __str__(self):
-        return '{} = {} {}'.format(self.res, self.op, self.val).ljust(20) + super().__str__()
+        return '{} = {} {}'.format(self.res, self.op, self.val).ljust(40) + super().__str__()

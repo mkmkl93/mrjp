@@ -61,11 +61,15 @@ def check_specific(choice, number, verbose=0):
     basename = ''.join(s)[:-4]
     process = subprocess.run(['cat', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, encoding='utf-8')
-    # debug(process.stdout, verbose)
+    debug(process.stdout, verbose)
     process = subprocess.run(['./latc_ARCH', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, shell=False, encoding='utf-8')
     # debug('stdout: ' + process.stdout, verbose)
     # debug('stderr: ' + process.stderr, verbose)
+    if process.returncode != 0 and 'core' in choice:
+        debug('stderr: ' + process.stderr, verbose)
+        print("\033[91m" + basename + "\033[0m")
+        return 0
     debug(process.stderr, verbose)
 
     if 'good' in choice:

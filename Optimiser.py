@@ -39,6 +39,25 @@ class Optimiser:
         res.append(block)
         return res
 
+    def optimise(self, blocks: List[Block]) -> List[Block]:
+        quads = []
+        for block in blocks:
+            quads = self.get_quads(block, quads)
+
+        blocks = self.divide_into_blocks(quads, [])
+        for block in blocks:
+            self.calculate_alive(block)
+
+        for block in blocks:
+            self.calculate_code(block)
+
+        prolog_block = SmallBlock(str(0))
+        prolog_block.quads.append(self.add_strings())
+        prolog_block.quads.append(self.add_start())
+        blocks.insert(0, prolog_block)
+
+        return blocks
+
     def add_start(self) -> QEmpty:
         quad = QEmpty()
         quad.code.append('.text')
@@ -61,24 +80,38 @@ class Optimiser:
 
         return quad
 
-    def optimise(self, blocks: List[Block]) -> List[Block]:
-        quads = []
-        for block in blocks:
-            quads = self.get_quads(block, quads)
+    def get_epilog(self):
+        quad = QEmpty()
 
-        blocks = self.divide_into_blocks(quads, [])
-        for block in blocks:
-            self.calculate_alive(block)
+        for reg in reversed(callee_saved):
+            quad.code.append('    pop %{}'.format(reg))
+        quad.code.append('    mov %rbp, %rsp')
+        quad.code.append('    pop %rbp')
 
-        for block in blocks:
-            self.calculate_code(block)
+        return quad
 
-        prolog_block = SmallBlock(str(0))
-        prolog_block.quads.append(self.add_strings())
-        prolog_block.quads.append(self.add_start())
-        blocks.insert(0, prolog_block)
+    def store_caller(self, block, quad):
+        for reg in caller_saved:
+            if block.table[reg] != set():
+                quad.code.append('    push %'.format(reg))
 
-        return blocks
+        return quad
+
+    def restore_caller(self, block, quad):
+        for reg in reversed(caller_saved):
+            if block.table[reg] != set():
+                quad.code.append('    pop %'.format(reg))
+        return quad
+
+    def get_prolog(self, quad):
+        quad.code.append('    push %rbp')
+        quad.code.append('    mov %rsp, %rbp')
+
+        for reg in callee_saved:
+            quad.code.append('    push %{}'.format(reg))
+
+        return quad
+
 
     def calculate_alive(self, block: SmallBlock):
         alive_set = AliveSet()
@@ -101,7 +134,9 @@ class Optimiser:
             elif isinstance(quad, QFunEnd):
                 pass
             elif isinstance(quad, QFunCall):
-                pass
+                alive_set.discard(quad.val)
+                for arg in quad.args:
+                    alive_set.add(arg)
             elif isinstance(quad, QBinOp):
                 pass
             elif isinstance(quad, QUnOp):
@@ -135,17 +170,16 @@ class Optimiser:
                 if quad.val2.isnumeric():
                     block, quad, reg = self.get_free_register(block, quad)
                     quad.code.append('    movl ${}, %{}'.format(int(quad.val2), reg))
-                    block.table[reg].add(quad.val1)
-                    block.table[quad.val1].add(reg)
                 else:
                     block, quad, reg = self.get_register(block, quad, quad.val2)
-                    block.table[quad.val1].add(reg)
-                    block.table[reg].add(quad.val1)
-
                     if quad.val2 not in quad.alive:
                         block.table[quad.val2] = set()
                         block.table[quad.val2].discard(reg)
                         block.table[reg].discard(quad.val2)
+
+                if quad.val1 in quad.alive:
+                    block.table[reg].add(quad.val1)
+                    block.table[quad.val1].add(reg)
 
             elif isinstance(quad, QFunBegin):
                 quad_empty = QEmpty()
@@ -162,7 +196,28 @@ class Optimiser:
             elif isinstance(quad, QFunEnd):
                 pass
             elif isinstance(quad, QFunCall):
-                pass
+                quad_store = self.store_caller(block, QEmpty())
+                quad_restore = self.restore_caller(block, QEmpty())
+                block.quads.insert(i + 1, quad_restore)
+                block.quads.insert(i, quad_store)
+                omit = True
+
+                for arg in quad.args[:5:-1]:
+                    block, quad, arg_loc = self.get_register(block, quad, arg)
+                    quad.code.append('    push %{}'.format(arg_loc))
+
+                for arg, reg in zip(quad.args[:6], arg_registers):
+                    block, quad, arg_loc = self.get_register(block, quad, arg)
+                    quad.code.append('    mov %{}, %{}'.format(arg_loc, reg))
+
+                quad.code.append('    call {}'.format(quad.name))
+
+                if len(quad.args) > 6:
+                    quad.code.append('    add ${}, %rsp'.format(8 * (len(quad.args) - 6)))
+
+                if quad.val in quad.alive:
+                    reg = self.get_free_register(block, quad.val)
+                    self.code.append('    movl %eax, %{}'.format(reg))
             elif isinstance(quad, QBinOp):
                 pass
             elif isinstance(quad, QUnOp):
@@ -195,21 +250,3 @@ class Optimiser:
                 block.table[reg] = set()
         return block, quad
 
-    def get_epilog(self):
-        quad = QEmpty()
-
-        for reg in reversed(callee_saved):
-            quad.code.append('    pop %{}'.format(reg))
-        quad.code.append('    mov %rbp, %rsp')
-        quad.code.append('    pop %rbp')
-
-        return quad
-
-    def get_prolog(self, quad):
-        quad.code.append('    push %rbp')
-        quad.code.append('    mov %rsp, %rbp')
-
-        for reg in callee_saved:
-            quad.code.append('    push %{}'.format(reg))
-
-        return quad

@@ -3,7 +3,7 @@ from Quads import *
 arg_registers = ['edi', 'esi', 'edx', 'ecx', 'r8d', 'r9d']
 free_registers = ['r10d', 'r11d', 'r12d', 'r13d', 'r14d', 'r15d']
 callee_saved = ['rbx', 'r12', 'r13', 'r14', 'r15']
-
+caller_saved = ['r10', 'r11']
 
 class Table:
     def __init__(self):
