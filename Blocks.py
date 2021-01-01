@@ -1,3 +1,23 @@
+from Quads import *
+
+arg_registers = ['edi', 'esi', 'edx', 'ecx', 'r8d', 'r9d']
+free_registers = ['r10d', 'r11d', 'r12d', 'r13d', 'r14d', 'r15d']
+callee_saved = ['rbx', 'r12', 'r13', 'r14', 'r15']
+
+
+class Table:
+    def __init__(self):
+        self.table = {}
+
+    def __getitem__(self, item) -> set:
+        if item not in self.table:
+            self.table[item] = set()
+        return self.table[item]
+
+    def __setitem__(self, key, value) -> None:
+        self.table[key] = value
+
+
 class Block:
     def __init__(self, name):
         self.name = name
@@ -89,6 +109,10 @@ class SmallBlock(Block):
         super().__init__(name)
         self.quads = []
         self.big_brother = block
+        self.table = Table()
+
+        for free_reg in free_registers:
+            self.table[free_reg] = set()
 
     def add_quad(self, quad):
         self.quads.append(quad)
@@ -140,125 +164,8 @@ class SmallBlock(Block):
         if not self.quads:
             return ''
         else:
-            return 'Block ' + str(self.name) + ':\n' + '\n'.join([str(x) for x in self.quads])
-
-class Quad:
-    def __init__(self):
-        self.alive = {}
-        pass
+            return 'Block ' + self.name + ':\n' + '\n'.join([str(x) for x in self.quads])
 
 
-class QLabel:
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self):
-        return '{}:'.format(self.name)
 
 
-class QJump:
-    def __init__(self, op, name):
-        self.op = op
-        self.name = name
-
-    def __str__(self):
-        return '{} {}'.format(self.op, self.name)
-
-
-class QCmp:
-    def __init__(self, val1, val2):
-        self.val1 = val1
-        self.val2 = val2
-
-    def __str__(self):
-        return 'cmp {}, {}'.format(self.val1, self.val2)
-
-
-class QReturn(Quad):
-    def __init__(self, val=None):
-        super().__init__()
-        self.val = val
-
-    def __str__(self):
-        if self.val is None:
-            return 'return'
-        else:
-            return 'return {}'.format(self.val)
-
-
-class QEq(Quad):
-    def __init__(self, val1, val2):
-        super().__init__()
-        self.val1 = val1
-        self.val2 = val2
-
-    def __str__(self):
-        return '{} = {}'.format(self.val1, self.val2)
-
-
-class QFunBegin(Quad):
-    def __init__(self, name, val=None):
-        super().__init__()
-        self.name = name
-        self.val = val
-
-    def __str__(self):
-        if self.val is None:
-            return '{}'.format(self.name)
-        else:
-            return '{}__begin {}'.format(self.name, self.val)
-
-
-class QFunEnd(Quad):
-    def __init__(self, name):
-        super().__init__()
-        self.name = name
-
-    def __str__(self):
-        return '{}__end'.format(self.name)
-
-
-class QEmpty(Quad):
-    def __init__(self):
-        super().__init__()
-
-    def __str__(self):
-        return ''
-
-
-class QFunCall(Quad):
-    def __init__(self, name, val, args):
-        super().__init__()
-        self.val = val
-        self.name = name
-        self.args = args
-
-    def __str__(self):
-        if self.val is None:
-            return 'call {} {}'.format(self.name, ' '.join(self.args))
-        else:
-            return '{} = call {} {}'.format(self.val, self.name, ' '.join(self.args))
-
-
-class QBinOp(Quad):
-    def __init__(self, res, val1, op, val2, typ='int'):
-        super().__init__()
-        self.res = res
-        self.val1 = val1
-        self.op = op
-        self.val2 = val2
-        self.typ = typ
-
-    def __str__(self):
-        return '{} = {} {} {} ({})'.format(self.res, self.val1, self.op, self.val2, self.typ)
-
-
-class QUnOp(Quad):
-    def __init__(self, res, op, val):
-        super().__init__()
-        self.res = res
-        self.op = op
-        self.val = val
-
-    def __str__(self):
-        return '{} = {} {}'.format(self.res, self.op, self.val)

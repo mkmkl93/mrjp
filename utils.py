@@ -1,8 +1,7 @@
 from antlr.LatteParser import LatteParser
 from Vars import *
-from CodeProgram import *
-
-registers = ['edi', 'esi', 'edx', 'ecx', 'r8d', 'r9d']
+from Quads import *
+from Blocks import *
 
 def get_default_value(typ):
     if typ == 'int':

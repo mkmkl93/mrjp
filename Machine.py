@@ -15,7 +15,7 @@ class Machine:
             sys.stderr.write(msg)
 
     def to_mem(self, var: str):
-        if var in registers:
+        if var in arg_registers:
             return '%' + var
 
         if var.isnumeric():
@@ -106,7 +106,7 @@ class Machine:
                 arg_loc = self.to_mem(arg)
                 self.code.append('    push {}'.format(arg_loc))
 
-            for arg, reg in zip(quad.args[:6], registers):
+            for arg, reg in zip(quad.args[:6], arg_registers):
                 arg_loc = self.to_mem(arg)
                 self.code.append('    movl {}, %{}'.format(arg_loc, reg))
 
@@ -166,9 +166,9 @@ class Machine:
                 self.code.append('    mov %edx, %esi')
                 self.code.append('    call concat')
             elif op == 'idiv':
-                self.code.append('    mov %edx, %r10d')
+                self.code.append('    mov %edx, %ebx')
                 self.code.append('    cdq')
-                self.code.append('    idiv %r10d')
+                self.code.append('    idiv %ebx')
             else:
                 self.code.append('    {} %edx, %eax'.format(op))
 

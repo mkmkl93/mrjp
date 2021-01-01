@@ -72,7 +72,7 @@ class Code4:
                 arg_name = args.ID(i).getText()
 
                 if i < 6:
-                    reg = registers[i]
+                    reg = arg_registers[i]
                     arg_loc = block.give_var_name()
                     block.add_quad(QEq(arg_loc, reg))
                 else:
@@ -98,9 +98,6 @@ class Code4:
                 block = self.enter_block(stmt, block)
             else:
                 self.error(ctx, "Unresolved instance in enter_block stmt")
-
-        if isinstance(block, SmallBlock) and block.quads != [] and not isinstance(block.quads[-1], QEmpty):
-            block.add_quad(QEmpty())
 
         return block
 

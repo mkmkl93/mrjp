@@ -71,15 +71,16 @@ def main(argv):
         debug(block)
     debug('')
 
-    machine.translate(block_optimised)
-    for i in machine.code:
-        debug(i)
-
     output_file_base = os.path.splitext(input_file)[0]
     output_file = output_file_base + '.s'
     with open(output_file, 'w') as output:
-        for line in machine.code:
-            output.write(line + '\n')
+        for block in block_optimised:
+            for quad in block.quads:
+                if quad.code != []:
+                    for line in quad.code:
+                        debug(line)
+                        output.write(line + '\n')
+    debug('')
 
     process = subprocess.run(['clang', '-g', 'lib/runtime.c', output_file, '-o' + output_file_base],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, encoding='utf-8')
