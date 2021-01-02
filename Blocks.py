@@ -1,9 +1,11 @@
 from Quads import *
 
-arg_registers = ['edi', 'esi', 'edx', 'ecx', 'r8d', 'r9d']
-free_registers = ['r10d', 'r11d', 'r12d', 'r13d', 'r14d', 'r15d']
-callee_saved = ['rbx', 'r12', 'r13', 'r14', 'r15']
-caller_saved = ['r10', 'r11']
+arg_registers = ['%rdi', '%rsi', '%rdx', '%rcx', '%r8', '%r9']
+
+callee_saved = ['%rbx', '%r12', '%r13', '%r14', '%r15']
+caller_saved = ['%r10', '%r11']
+
+free_registers = callee_saved + caller_saved
 
 class Table:
     def __init__(self):
@@ -94,12 +96,6 @@ class BigBlock(Block):
     def limit_locals(self, limit):
         self.blocks[0].limit_locals(limit)
 
-    def add_following_block(self, block):
-        self.following_blocks.append(block)
-
-    def add_previous_block(self, block):
-        self.previous_blocks.append(block)
-
     def __str__(self):
         return 'Block ' + self.name + '\n'.join(str(x) for x in self.blocks)
 
@@ -159,6 +155,12 @@ class SmallBlock(Block):
 
     def limit_locals(self, limit):
         self.quads[0] = QFunBegin(str(self.quads[0]), limit)
+
+    def add_following(self, block_label):
+        self.following_blocks.append(block_label)
+
+    def add_previous(self, block_label):
+        self.previous_blocks.append(block_label)
 
     def __str__(self):
         if not self.quads:

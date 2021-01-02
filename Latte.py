@@ -88,6 +88,8 @@ def main(argv):
     debug(process.stdout)
     debug(process.stderr)
 
+    if process.returncode != 0:
+        sys.exit(process.returncode)
     sys.stderr.write('OK\n')
     sys.exit(0)
 

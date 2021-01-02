@@ -1,12 +1,22 @@
-class AliveSet():
-    def __init__(self):
-        self.alive_set = set()
+class AliveSet:
+    def __init__(self, s=set()):
+        self.alive_set = s
 
     def __str__(self):
         return str(self.alive_set)
 
+    def __contains__(self, item):
+        return item in self.alive_set
+
+    def __eq__(self, other):
+        return self.alive_set == other.alive_set
+
+    def union(self, other):
+        self.alive_set |= other.alive_set
+
     def add(self, value):
-        if value is None or value.isnumeric():
+        print(value, value.isnumeric())
+        if value is None or value.isnumeric() or value == '' or value[0] == '"':
             pass
         else:
             self.alive_set.add(value)
@@ -15,7 +25,8 @@ class AliveSet():
         self.alive_set.discard(value)
 
     def copy(self):
-        return self.alive_set.copy()
+        return AliveSet(self.alive_set.copy())
+
 
 
 class Quad:
@@ -30,12 +41,16 @@ class Quad:
 
 
 class QEmpty(Quad):
+    def __init__(self):
+        super().__init__()
+
     def __str__(self):
         return 'QEmpty'.ljust(40) + super().__str__()
 
 
 class QLabel(Quad):
     def __init__(self, name):
+        super().__init__()
         self.name = name
 
     def __str__(self):
@@ -44,6 +59,7 @@ class QLabel(Quad):
 
 class QJump(Quad):
     def __init__(self, op, name):
+        super().__init__()
         self.op = op
         self.name = name
 
@@ -53,6 +69,7 @@ class QJump(Quad):
 
 class QCmp(Quad):
     def __init__(self, val1, val2):
+        super().__init__()
         self.val1 = val1
         self.val2 = val2
 
