@@ -63,7 +63,7 @@ def check_specific(choice, number, verbose=0):
                              stderr=subprocess.PIPE, encoding='utf-8')
     debug(process.stdout, verbose)
     process = subprocess.run(['./latc_ARCH', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, shell=False, encoding='utf-8')
+                             stderr=subprocess.PIPE, shell=False, encoding='utf-8', timeout=2)
     # debug('stdout: ' + process.stdout, verbose)
     # debug('stderr: ' + process.stderr, verbose)
     if process.returncode != 0 and 'core' in choice:
@@ -79,8 +79,12 @@ def check_specific(choice, number, verbose=0):
         else:
             ins = ''
 
-        process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins)
+        try:
+            process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins, timeout=2)
+        except subprocess.TimeoutExpired:
+            return 0
+
         debug('stdout: ' + process.stdout, verbose)
         debug('stderr: ' + process.stderr, verbose)
         debug('return code: ' + str(process.returncode), verbose)

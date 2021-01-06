@@ -1,6 +1,6 @@
 class AliveSet:
     def __init__(self, s=set()):
-        self.alive_set = s
+        self.alive_set = s.copy()
 
     def __str__(self):
         return str(self.alive_set)
@@ -15,7 +15,6 @@ class AliveSet:
         self.alive_set |= other.alive_set
 
     def add(self, value):
-        print(value, value.isnumeric())
         if value is None or value.isnumeric() or value == '' or value[0] == '"':
             pass
         else:
@@ -26,7 +25,6 @@ class AliveSet:
 
     def copy(self):
         return AliveSet(self.alive_set.copy())
-
 
 
 class Quad:

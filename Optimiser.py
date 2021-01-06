@@ -159,8 +159,8 @@ class Optimiser:
             if isinstance(quad, QJump):
                 pass
             elif isinstance(quad, QCmp):
-                alive_set.discard(quad.val1)
-                alive_set.discard(quad.val2)
+                alive_set.add(quad.val1)
+                alive_set.add(quad.val2)
             elif isinstance(quad, QReturn):
                 alive_set.add(quad.val)
             elif isinstance(quad, QEq):
@@ -187,12 +187,28 @@ class Optimiser:
     def calculate_code(self, block: SmallBlock) -> SmallBlock:
         place_holder = block.quads
         block.quads = []
+
         for i, quad in enumerate(place_holder):
             if isinstance(quad, QEmpty):
                 block.quads.append(quad)
-            if isinstance(quad, QJump):
+            elif isinstance(quad, QLabel):
+                quad.code.append(quad.name + ':')
+                block.quads.append(quad)
+            elif isinstance(quad, QJump):
+                quad.code.append('    {} {}'.format(quad.op, quad.name))
                 block.quads.append(quad)
             elif isinstance(quad, QCmp):
+                # Both don't have registers and the the first one will be alive while the second won't be
+                if not self.has_register(block, quad.val1) and not self.has_register(block, quad.val2) \
+                   and quad.val1 in quad.alive and quad.val2 not in quad.alive:
+                    block, quad, var1_loc = self.get_register(block, quad, quad.val1)
+                    var2_loc = self.get_anything(block, quad.val2)
+                else:
+                    var1_loc = self.get_anything(block, quad.val1)
+                    block, quad, var2_loc = self.get_register(block, quad, quad.val2)
+
+                quad.code.append('    cmp {}, {}'.format(var2_loc, var1_loc))
+
                 block.quads.append(quad)
             elif isinstance(quad, QReturn):
                 if quad.val is not None:
@@ -248,8 +264,10 @@ class Optimiser:
                     quad.code.append('    push {}'.format(arg_loc))
 
                 for arg, reg in zip(quad.args[:6], arg_registers):
-                    block, quad, arg_loc = self.get_register(block, quad, arg)
-                    quad.code.append('    mov {}, {}'.format(arg_loc, reg))
+                    arg_loc = self.get_anything(block, arg)
+
+                    op = 'mov' if arg_loc in free_registers else 'movq'
+                    quad.code.append('    {} {}, {}'.format(op, arg_loc, reg))
 
                 quad.code.append('    call {}'.format(quad.name))
 
@@ -378,6 +396,17 @@ class Optimiser:
                 block.table[quad.res].add(var_loc)
 
                 block.quads.append(quad)
+
+        quad_clear_block = QEmpty()
+        quad_clear_block.alive = block.quads[-1].alive.copy()
+        block, quad_clear_block = self.clear_block(block, quad_clear_block)
+
+        # If last quad is jump
+        if isinstance(block.quads[-1], QJump):
+            block.quads.insert(len(block.quads) - 1, quad_clear_block)
+        else:
+            block.quads.append(quad_clear_block)
+
         return block
 
     def get_anything(self, block: SmallBlock, var: str) -> str:
@@ -387,15 +416,18 @@ class Optimiser:
                 return place
 
         # But pointer is still ok
-        for place in block.table[var]:
-            return place
+        return self.get_mem_loc(var)
 
     def get_register(self, block: SmallBlock, quad: Quad, var: str) -> (Block, Quad, str):
         for place in block.table[var]:
             if place in free_registers:
                 return block, quad, place
 
-        return self.get_free_register(block, quad)
+        block, quad, free_reg = self.get_free_register(block, quad)
+        var_loc = self.get_mem_loc(var)
+        quad.code.append('movq {}, {}'.format(var_loc, free_reg))
+
+        return block, quad, free_reg
 
     def get_free_register(self, block: SmallBlock, quad: Quad) -> (Block, Quad, str):
         for free_reg in free_registers:
@@ -407,7 +439,7 @@ class Optimiser:
 
     def get_mem_loc(self, var: str) -> str:
         m = re.match(r'.*_t(\d*)', var)
-        var_loc = '-{}(%rbp)'.format(4 * int(m.group(1)))
+        var_loc = '-{}(%rbp)'.format(8 * int(m.group(1)))
 
         return var_loc
 
@@ -422,7 +454,7 @@ class Optimiser:
             if block.table[reg] is not None:
                 for var in block.table[reg]:
                     var_loc = self.get_mem_loc(var)
-                    if var_loc not in block.table[var]:
+                    if var_loc not in block.table[var] and var in quad.alive:
                         quad.code.append('    movq {}, {}'.format(reg, var_loc))
                 block.table[reg] = set()
         return block, quad
