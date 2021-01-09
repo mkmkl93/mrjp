@@ -5,7 +5,7 @@ import sys
 import bisect
 from utils import *
 
-class Optimiser:
+class RegOptimiser:
     def __init__(self, DEBUG):
         self.DEBUG = DEBUG
         self.code = []

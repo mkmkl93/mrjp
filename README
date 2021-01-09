@@ -3,4 +3,22 @@ razem tworzy nowe środowisko bo nie potrafiłem tego naprawić w Makefilu a to 
 to niezgodne z treścią. Przygotowałem od razy mój skrypt do testowania zeby pokazać jak ja z tego korzystałem.
 
 Zmiany do 1 terminu:
-Dodana większa liczba testów.
+Opis do skryptu, którego wcześniej nie było
+'make test' -> sprawdza wszystkie testy
+'make test g' -> sprawdza dobre testy
+'make test b' -> sprawdza złe testy
+'make test [b/g] number' -> sprawdza dany test z danej kategorii
+'make test clean' -> czysci pliki wykonywalne i kody assemblerowe
+
+Dodana większa liczba testów. Oczywiście cały kompilator jakoś działa a przynajmniej testy nie wykazują, że nie działa.
+Wprowadzenie używania większej liczby rejestrów. Rejestry służące za argumenty są tak na prawdę od razu w funkcji
+chowane do zmiennych w celu umożliwienia później wykonywania kolejnych funkcji. Na biężąco korzystam z rejestrów callee
+saved czyli, '%rbx', '%r12', '%r13', '%r14', '%r15', a w następnej kolejności z caller saved czyli '%r10', '%r11'.
+Po każdej czwórce jeżeli jakaś zmienna biorąca udział w danej czwórce nie jest już "żywa" to jest zapominana z tabelki,
+to znaczy, że jeżeli istniała w jakimś rejestrze to wartość tego rejestru się nadal nie zmienia ale jest usuwane
+dwustronne wiązanie zmienna <-> rejestr. Jeżeli potrzebujemy zwolnić jakiś rejestr to z moich obserwacji wynika, że
+każda filozofia jest heurą a sprawdzenie za ile kroków dana zmienna zostanie użyta jest niemożliwe do obliczenia bez
+uprzedniego uruchomienia całego programu. Zatem wybrałem heurestykę, że dla każdej zmiennej zapamiętuję w których
+liniach ona wystąpiła i w razie potrzeby wrzucam do pamięci rejestr w którym najwcześniejsza zmienna występuje
+najpóźniej. Nie potrafiłem zoptymalizować kodu przy użyciu rejestrów opierając się na kodzie maszynowym, przez co
+zastąpiłem tłumaczenie każdej czwórki oddzielnie i niezależnie, na sposób uzależniony od reszty bloku.

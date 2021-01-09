@@ -8,7 +8,7 @@ from absl import app, flags
 from Simplifier import Simplifier
 from FrontEnd import FrontEnd
 from Code4 import Code4
-from Optimiser import Optimiser
+from RegOptimiser import RegOptimiser
 from antlr.LatteLexer import LatteLexer
 from antlr.LatteParser import LatteParser
 from antlr4.error.ErrorListener import ErrorListener
@@ -54,7 +54,7 @@ def main(argv):
     simplifier = Simplifier(FLAGS['debug'].value)
     front_end = FrontEnd(input_file, FLAGS['debug'].value)
     code4 = Code4(FLAGS['debug'].value)
-    optimiser = Optimiser(FLAGS['debug'].value)
+    optimiser = RegOptimiser(FLAGS['debug'].value)
 
     front_end.enter_program(prog_tree)
     prog_tree = simplifier.simplify(prog_tree)
