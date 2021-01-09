@@ -31,6 +31,7 @@ class Quad:
     def __init__(self):
         self.alive = AliveSet()
         self.code = []
+        self.line = 0
 
     def __str__(self):
         delimeter = '\n' + (' ' * 60)

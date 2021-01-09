@@ -8,7 +8,6 @@ from absl import app, flags
 from Simplifier import Simplifier
 from FrontEnd import FrontEnd
 from Code4 import Code4
-from Machine import Machine
 from Optimiser import Optimiser
 from antlr.LatteLexer import LatteLexer
 from antlr.LatteParser import LatteParser
@@ -55,7 +54,6 @@ def main(argv):
     simplifier = Simplifier(FLAGS['debug'].value)
     front_end = FrontEnd(input_file, FLAGS['debug'].value)
     code4 = Code4(FLAGS['debug'].value)
-    machine = Machine(FLAGS['debug'].value)
     optimiser = Optimiser(FLAGS['debug'].value)
 
     front_end.enter_program(prog_tree)

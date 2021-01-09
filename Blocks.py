@@ -1,4 +1,5 @@
 from Quads import *
+import re
 
 arg_registers = ['%rdi', '%rsi', '%rdx', '%rcx', '%r8', '%r9']
 
@@ -11,6 +12,10 @@ free_registers = callee_saved + caller_saved
 def is_register(var) -> bool:
     return var in free_registers + arg_registers
 
+
+def is_mem_loc(var) -> bool:
+    m = re.match(r'-?\d*\(%rbp\)', var)
+    return False
 
 class Table:
     def __init__(self):

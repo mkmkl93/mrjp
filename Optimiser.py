@@ -2,6 +2,7 @@ from typing import List
 
 import re
 import sys
+import bisect
 from utils import *
 
 class Optimiser:
@@ -11,6 +12,8 @@ class Optimiser:
         self.strings = []
         self.block_counter = 1
         self.add_at_the_end = 0
+        self.appearances = {}
+        self.line = 0
 
     def debug(self, msg) -> None:
         if self.DEBUG:
@@ -142,21 +145,21 @@ class Optimiser:
                 blocks[jmp_indx].add_previous(blocks[i].quads[0].name)
 
         for i in range(n):
-            que = [(i, False)]
+            que = [i]
 
             while len(que) != 0:
-                x, flag = que.pop()
+                x = que.pop()
 
                 old_state = blocks[x].quads[0].alive.copy()
                 blocks[x] = self.calculate_alive(blocks[x])
                 new_state = blocks[x].quads[0].alive.copy()
 
-                if old_state != new_state or flag:
+                if old_state != new_state or len(blocks[x].quads) == 1:
                     for prev_name in blocks[x].previous_blocks:
                         prev_number = map_label[prev_name]
                         if prev_number != x:
                             blocks[prev_number].quads[-1].alive.union(new_state)
-                            que.append((prev_number, True))
+                            que.append(prev_number)
 
         return blocks
 
@@ -165,17 +168,23 @@ class Optimiser:
         ln = len(block.quads)
         for i, quad in enumerate(block.quads[-1::-1]):
             block.quads[ln - i - 1].alive = alive_set.copy()
+            self.line += 1
+            quad.line = self.line
 
             if isinstance(quad, QJump):
                 pass
             elif isinstance(quad, QCmp):
                 alive_set.add(quad.val1)
                 alive_set.add(quad.val2)
+                self.add_appearance(quad.val1)
+                self.add_appearance(quad.val2)
             elif isinstance(quad, QReturn):
                 alive_set.add(quad.val)
+                self.add_appearance(quad.val)
             elif isinstance(quad, QEq):
                 alive_set.discard(quad.val1)
                 alive_set.add(quad.val2)
+                self.add_appearance(quad.val2)
             elif isinstance(quad, QFunBegin):
                 pass
             elif isinstance(quad, QFunEnd):
@@ -184,15 +193,23 @@ class Optimiser:
                 alive_set.discard(quad.val)
                 for arg in quad.args:
                     alive_set.add(arg)
+                    self.add_appearance(arg)
             elif isinstance(quad, QBinOp):
                 alive_set.discard(quad.res)
                 alive_set.add(quad.val1)
                 alive_set.add(quad.val2)
+                self.add_appearance(quad.val1)
+                self.add_appearance(quad.val2)
             elif isinstance(quad, QUnOp):
                 alive_set.discard(quad.res)
                 alive_set.add(quad.val)
-
+                self.add_appearance(quad.val)
         return block
+
+    def add_appearance(self, var):
+        if var not in self.appearances:
+            self.appearances[var] = []
+        self.appearances[var].append(self.line)
 
     def calculate_code(self, block: SmallBlock) -> SmallBlock:
         place_holder = block.quads
@@ -300,6 +317,10 @@ class Optimiser:
                     block.table[free_reg].add(quad.val)
                     block.table[quad.val].add(free_reg)
 
+                for arg in quad.args:
+                    if arg not in quad.alive:
+                        self.clear_var(block, arg)
+
                 quad_store = self.store_caller(block, QEmpty())
                 quad_restore = self.restore_caller(block, QEmpty())
                 quad_restore.alive = quad.alive
@@ -313,8 +334,8 @@ class Optimiser:
                     val1_loc = self.get_anything(block, quad.val1)
                     val2_loc = self.get_anything(block, quad.val2)
 
-                    op1 = 'mov' if val1_loc in free_registers else 'movl'
-                    op2 = 'mov' if val2_loc in free_registers else 'movl'
+                    op1 = 'mov' if val1_loc in free_registers else 'movq'
+                    op2 = 'mov' if val2_loc in free_registers else 'movq'
 
                     quad.code.append('    {} {}, %rdi'.format(op1, val1_loc))
                     quad.code.append('    {} {}, %rsi'.format(op2, val2_loc))
@@ -359,8 +380,8 @@ class Optimiser:
                 else:
                     # res_loc = self.to_mem(quad.res)
                     block, quad, val1_loc = self.get_register(block, quad, quad.val1)
-                    val2_loc = self.get_anything(block, quad.val2)
                     bloc, quad, res_loc = self.get_free_register(block, quad)
+                    val2_loc = self.get_anything(block, quad.val2)
 
                     quad.code.append('    mov {}, {}'.format(val1_loc, res_loc))
 
@@ -466,13 +487,52 @@ class Optimiser:
             if block.table[free_reg] == set():
                 return block, quad, free_reg
 
-        #TODO freee reg here
-        sys.exit(1)
-        return None
+        block, quad = self.free_register(block, quad)
+        return self.get_free_register(block, quad)
+
+    def free_register(self, block: SmallBlock, quad: Quad) -> (Block, Quad):
+        # Forget clean values and check for empty register
+        for free_reg in free_registers:
+            placeholder_free_reg = block.table[free_reg]
+
+            for var in placeholder_free_reg:
+                placeholder_var = block.table[var]
+                for var_place in placeholder_var:
+                    if is_mem_loc(var_place):
+                        block.table[var].discard(free_reg)
+                        block.table[free_reg].discard(var)
+
+            if block.table[free_reg] == set():
+                return block, quad
+
+        # All left values in registers are dirty so find register that appears the farthest and clean it
+        latest_appearance = -1
+        reg_to_free = None
+        for free_reg in free_registers:
+            latest_tmp = 1000000
+
+            for var in block.table[free_reg]:
+                bisect_tmp = bisect.bisect(self.appearances[var], quad.line)
+                if bisect_tmp != len(self.appearances[var]):
+                    var_next_appearance = self.appearances[var][bisect_tmp]
+                    latest_tmp = min(latest_tmp, var_next_appearance)
+
+            if latest_tmp > latest_appearance:
+                latest_appearance = latest_tmp
+                reg_to_free = free_reg
+
+        # for var in block.table[reg_to_free]:
+        #     mem_loc = self.get_mem_loc(var)
+        #     quad.code.append('    movq {}, {}'.format(reg_to_free, mem_loc))
+
+        return self.clear_reg(block, quad, reg_to_free, True)
 
     def get_mem_loc(self, var: str) -> str:
         m = re.match(r'.*_t(\d*)', var)
-        var_loc = '-{}(%rbp)'.format(8 * int(m.group(1)))
+        if m:
+            var_loc = '-{}(%rbp)'.format(8 * int(m.group(1)))
+        else:
+            var_loc = var
 
         return var_loc
 
@@ -495,14 +555,14 @@ class Optimiser:
                 block.table[reg] = set()
         return block, quad
 
-    def clear_reg(self, block: SmallBlock, quad: Quad, reg: str) -> (SmallBlock, Quad):
+    def clear_reg(self, block: SmallBlock, quad: Quad, reg: str, force_save=False) -> (SmallBlock, Quad):
         placeholder = block.table[reg].copy()
 
         for var in placeholder:
             block.table[reg].discard(var)
             block.table[var].discard(reg)
 
-            if block.table[var] == set() and var in quad.alive:
+            if block.table[var] == set() and var in quad.alive or force_save:
                 var_loc = self.get_mem_loc(var)
                 quad.code.append('    movq {}, {}'.format(reg, var_loc))
 

@@ -63,8 +63,8 @@ def check_specific(choice, number, verbose=0):
                              stderr=subprocess.PIPE, encoding='utf-8')
     debug(process.stdout, verbose)
     try:
-        process = subprocess.run(['./latc_ARCH', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, encoding='utf-8', timeout=1)
+        process = subprocess.run(['./latc_x86_64', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, encoding='utf-8', timeout=2)
     except subprocess.TimeoutExpired:
         return 0
     # debug('stdout: ' + process.stdout, verbose)
@@ -84,7 +84,7 @@ def check_specific(choice, number, verbose=0):
 
         try:
             process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins, timeout=1)
+                                     stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins, timeout=2)
         except subprocess.TimeoutExpired:
             return 0
 
@@ -115,6 +115,15 @@ def check_specific(choice, number, verbose=0):
                 return 1
 
 
+def clean_test():
+    cwd = os.getcwd()
+    path = cwd + '/lattests/good/'
+    files = os.listdir(path)
+    for file in files:
+        if file.endswith('.s') or '.' not in file:
+            subprocess.run(['rm', path + file])
+
+
 def main(argv):
     if len(argv) == 1:
         check_good()
@@ -125,6 +134,8 @@ def main(argv):
             check_good()
         elif argv[1] == 'b':
             check_bad()
+        elif argv[1] == 'clean':
+            clean_test()
         else:
             check_ext()
     elif len(argv) == 3:
