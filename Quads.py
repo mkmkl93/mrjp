@@ -67,48 +67,48 @@ class QJump(Quad):
 
 
 class QCmp(Quad):
-    def __init__(self, val1, val2):
+    def __init__(self, var1, var2):
         super().__init__()
-        self.val1 = val1
-        self.val2 = val2
+        self.var1 = var1
+        self.var2 = var2
 
     def __str__(self):
-        return 'cmp {}, {}'.format(self.val1, self.val2).ljust(40) + super().__str__()
+        return 'cmp {}, {}'.format(self.var1, self.var2).ljust(40) + super().__str__()
 
 
 class QReturn(Quad):
-    def __init__(self, val=None):
+    def __init__(self, var=None):
         super().__init__()
-        self.val = val
+        self.var = var
 
     def __str__(self):
-        if self.val is None:
+        if self.var is None:
             return 'return {}'.format(super().__str__())
         else:
-            return 'return {}'.format(self.val).ljust(40) + super().__str__()
+            return 'return {}'.format(self.var).ljust(40) + super().__str__()
 
 
 class QEq(Quad):
-    def __init__(self, val1, val2):
+    def __init__(self, var1, var2):
         super().__init__()
-        self.val1 = val1
-        self.val2 = val2
+        self.var1 = var1
+        self.var2 = var2
 
     def __str__(self):
-        return '{} = {}'.format(self.val1, self.val2).ljust(40) + super().__str__()
+        return '{} = {}'.format(self.var1, self.var2).ljust(40) + super().__str__()
 
 
 class QFunBegin(Quad):
-    def __init__(self, name, val=None):
+    def __init__(self, name, var=None):
         super().__init__()
         self.name = name
-        self.val = val
+        self.var = var
 
     def __str__(self):
-        if self.val is None:
+        if self.var is None:
             return '{}'.format(self.name)
         else:
-            return '{}__begin {}'.format(self.name, self.val).ljust(40) + super().__str__()
+            return '{}__begin {}'.format(self.name, self.var).ljust(40) + super().__str__()
 
 
 class QFunEnd(Quad):
@@ -121,38 +121,38 @@ class QFunEnd(Quad):
 
 
 class QFunCall(Quad):
-    def __init__(self, name, val, args):
+    def __init__(self, name, var, args):
         super().__init__()
-        self.val = val
+        self.var = var
         self.name = name
         self.args = args
 
     def __str__(self):
-        if self.val is None:
+        if self.var is None:
             return 'call {} {}'.format(self.name, ' '.join(self.args)).ljust(40) + super().__str__()
         else:
-            return '{} = call {} {}'.format(self.val, self.name, ' '.join(self.args)).ljust(40) + super().__str__()
+            return '{} = call {} {}'.format(self.var, self.name, ' '.join(self.args)).ljust(40) + super().__str__()
 
 
 class QBinOp(Quad):
-    def __init__(self, res, val1, op, val2, typ='int'):
+    def __init__(self, res, var1, op, var2, typ='int'):
         super().__init__()
         self.res = res
-        self.val1 = val1
+        self.var1 = var1
         self.op = op
-        self.val2 = val2
+        self.var2 = var2
         self.typ = typ
 
     def __str__(self):
-        return '{} = {} {} {} ({})'.format(self.res, self.val1, self.op, self.val2, self.typ).ljust(40) + super().__str__()
+        return '{} = {} {} {} ({})'.format(self.res, self.var1, self.op, self.var2, self.typ).ljust(40) + super().__str__()
 
 
 class QUnOp(Quad):
-    def __init__(self, res, op, val):
+    def __init__(self, res, op, var):
         super().__init__()
         self.res = res
         self.op = op
-        self.val = val
+        self.var = var
 
     def __str__(self):
-        return '{} = {} {}'.format(self.res, self.op, self.val).ljust(40) + super().__str__()
+        return '{} = {} {}'.format(self.res, self.op, self.var).ljust(40) + super().__str__()

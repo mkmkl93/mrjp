@@ -74,7 +74,7 @@ def main(argv):
     with open(output_file, 'w') as output:
         for block in block_optimised:
             for quad in block.quads:
-                if quad.code != []:
+                if quad.code:
                     for line in quad.code:
                         debug(line)
                         output.write(line + '\n')

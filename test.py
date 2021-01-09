@@ -17,15 +17,15 @@ def check_good():
     files = os.listdir(path)
     files.sort(key=lambda f: os.stat(path + f).st_size)
     count = 0
-    totalCount=0
+    total_count = 0
     for file in files:
         if file.endswith('.lat'):
-            totalCount += 1
+            total_count += 1
             m = re.match(r'core(\d*).*', file)
 
             count += check_specific('good/core000.lat', int(m.groups(1)[0]), 0)
 
-    print("\033[94m" + 'Passes: {}/{}'.format(count, totalCount) + "\033[0m")
+    print("\033[94m" + 'Passes: {}/{}'.format(count, total_count) + "\033[0m")
 
 
 def check_bad():
@@ -33,24 +33,24 @@ def check_bad():
     path = cwd + '/lattests/bad/'
     files = os.listdir(path)
     count = 0
-    totalCount=0
+    total_count=0
     for file in files:
         if file.endswith('.lat'):
-            totalCount += 1
+            total_count += 1
             m = re.match(r'bad(\d*).*', file)
 
             count += check_specific('bad/bad000.lat', int(m.groups(1)[0]), 0)
 
-    print("\033[94m" + 'Passes: {}/{}'.format(count, totalCount) + "\033[0m")
+    print("\033[94m" + 'Passes: {}/{}'.format(count, total_count) + "\033[0m")
 
 
 def check_ext():
     pass
 
 
-def debug(str, verbose):
+def debug(string, verbose):
     if verbose == 1:
-        print(str)
+        print(string)
 
 
 def check_specific(choice, number, verbose=0):
