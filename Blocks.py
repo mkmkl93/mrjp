@@ -7,6 +7,11 @@ caller_saved = ['%r10', '%r11']
 
 free_registers = callee_saved + caller_saved
 
+
+def is_register(var) -> bool:
+    return var in free_registers + arg_registers
+
+
 class Table:
     def __init__(self):
         self.table = {}

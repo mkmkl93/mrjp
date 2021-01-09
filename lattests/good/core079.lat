@@ -7,7 +7,8 @@ int main() {
     a = a + 1;
     if (a == 7) {
       a = a + 1;
-    } else {
+    }
+    else {
       printString("should not get here");
     }
   }

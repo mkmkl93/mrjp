@@ -20,3 +20,7 @@ def get_from_item(item: LatteParser.ItemContext, default_value: str, typ: str):
     value = item.expr()
 
     return Var(typ, default_value if value is None else value.getText())
+
+
+def is_const(var: str) -> bool:
+    return var.isnumeric() or var == '' or var[0] == '"'

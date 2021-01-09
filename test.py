@@ -62,8 +62,11 @@ def check_specific(choice, number, verbose=0):
     process = subprocess.run(['cat', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, encoding='utf-8')
     debug(process.stdout, verbose)
-    process = subprocess.run(['./latc_ARCH', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, shell=False, encoding='utf-8', timeout=2)
+    try:
+        process = subprocess.run(['./latc_ARCH', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, encoding='utf-8', timeout=1)
+    except subprocess.TimeoutExpired:
+        return 0
     # debug('stdout: ' + process.stdout, verbose)
     # debug('stderr: ' + process.stderr, verbose)
     if process.returncode != 0 and 'core' in choice:
@@ -81,7 +84,7 @@ def check_specific(choice, number, verbose=0):
 
         try:
             process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins, timeout=2)
+                                     stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins, timeout=1)
         except subprocess.TimeoutExpired:
             return 0
 
@@ -130,7 +133,7 @@ def main(argv):
         elif argv[1] == 'b':
             check_specific('bad/bad000.lat', int(argv[2]), 1)
 
-
+    return 0
 
 if __name__ == '__main__':
     main(sys.argv)
