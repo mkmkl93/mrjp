@@ -8,6 +8,8 @@ from absl import app, flags
 from Simplifier import Simplifier
 from FrontEnd import FrontEnd
 from Code4 import Code4
+from LCSE import LCSE
+from Alive import Alive
 from RegOptimiser import RegOptimiser
 from antlr.LatteLexer import LatteLexer
 from antlr.LatteParser import LatteParser
@@ -54,25 +56,41 @@ def main(argv):
     simplifier = Simplifier(FLAGS['debug'].value)
     front_end = FrontEnd(input_file, FLAGS['debug'].value)
     code4 = Code4(FLAGS['debug'].value)
+    alive = Alive(FLAGS['debug'].value)
+    lcse = LCSE(FLAGS['debug'].value)
     optimiser = RegOptimiser(FLAGS['debug'].value)
 
     front_end.enter_program(prog_tree)
     prog_tree = simplifier.simplify(prog_tree)
 
+    debug('Kod czwórkowy:')
     blocks = code4.enter_program(prog_tree)
     for block in blocks:
         debug(block)
     debug('')
 
-    block_optimised = optimiser.optimise(blocks)
-    for block in block_optimised:
+    debug("Podział na bloki i wylicznaie zbiorów żywych")
+    blocks_alive = alive.optimise(blocks)
+    for block in blocks_alive:
+        debug(block)
+    debug('')
+
+    debug("Optymalizacje LCSE")
+    blocks_optimised = lcse.optimise(blocks_alive)
+    for block in blocks_optimised:
+        debug(block)
+    debug('')
+
+    debug("Zamiana na kod maszynowy")
+    blocks_calculated = optimiser.optimise(blocks_optimised)
+    for block in blocks_calculated:
         debug(block)
     debug('')
 
     output_file_base = os.path.splitext(input_file)[0]
     output_file = output_file_base + '.s'
     with open(output_file, 'w') as output:
-        for block in block_optimised:
+        for block in blocks_calculated:
             for quad in block.quads:
                 if quad.code:
                     for line in quad.code:

@@ -1,0 +1,6 @@
+ERROR
+[91mCompilation error at 2:4[0m
+Returning wrong type
+Expected int got []
+[94m    return main;
+[0m

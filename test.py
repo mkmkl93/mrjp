@@ -16,6 +16,7 @@ def check_good():
     path = cwd + '/lattests/good/'
     files = os.listdir(path)
     files.sort(key=lambda f: os.stat(path + f).st_size)
+    # print('\n'.join(files))
     count = 0
     total_count = 0
     for file in files:
@@ -66,6 +67,7 @@ def check_specific(choice, number, verbose=0):
         process = subprocess.run(['./latc_x86_64', dir_path + basename + '.lat'], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, encoding='utf-8', timeout=2)
     except subprocess.TimeoutExpired:
+        print("\033[91m" + basename + "\033[0m")
         return 0
     # debug('stdout: ' + process.stdout, verbose)
     # debug('stderr: ' + process.stderr, verbose)
@@ -86,6 +88,7 @@ def check_specific(choice, number, verbose=0):
             process = subprocess.run(['./' + dir_path + basename], stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE, shell=False, encoding='utf-8', input=ins, timeout=2)
         except subprocess.TimeoutExpired:
+            print("\033[91m" + basename + "\033[0m")
             return 0
 
         debug('stdout: ' + process.stdout, verbose)

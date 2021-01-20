@@ -15,7 +15,7 @@ class AliveSet:
         self.alive_set |= other.alive_set
 
     def add(self, value):
-        if value is None or value.isnumeric() or value == '' or value[0] == '"':
+        if value is None or value.isnumeric() or value == '' or value[0] == '"' or (value[0] == '-' and value[1:].isnumeric()):
             pass
         else:
             self.alive_set.add(value)

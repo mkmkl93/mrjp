@@ -89,57 +89,20 @@ class RegOptimiser:
     def __init__(self, debug):
         self.dbug = debug
         self.code = []
-        self.strings = []
         self.block_counter = 1
         self.add_at_the_end = 0
         self.appearances = {}
         self.line = 0
+        self.strings = {}
+        self.string_counter = 1
 
     def debug(self, msg) -> None:
         if self.dbug:
             sys.stderr.write(msg)
 
-    def get_quads(self, block, res) -> List[Quad]:
-        if isinstance(block, BigBlock):
-            for b in block.blocks:
-                res = self.get_quads(b, res)
-        else:
-            for quad in block.quads:
-                res.append(quad)
-        return res
-
-    def divide_into_blocks(self, quads: List[Quad], res) -> List[SmallBlock]:
-        block = SmallBlock(str(self.block_counter))
-        block.add_quad(quads[0])
-        self.block_counter += 1
-
-        for i, quad in enumerate(quads[1:]):
-            if isinstance(quad, (QLabel, QFunBegin)):
-                res.append(block)
-                return self.divide_into_blocks(quads[i + 1:], res)
-            elif isinstance(quad, QJump):
-                block.add_quad(quad)
-                res.append(block)
-                return self.divide_into_blocks(quads[i + 2:], res)
-            else:
-                block.add_quad(quad)
-
-        res.append(block)
-        return res
-
-    def optimise(self, blocks: List[Block]) -> List[Block]:
-        quads = []
+    def optimise(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
         for block in blocks:
-            quads = self.get_quads(block, quads)
-
-        blocks = self.divide_into_blocks(quads, [])
-
-        blocks = self.calculate_alive_all(blocks)
-
-        for block in blocks:
-            block_label = block.quads[0].name
-            self.debug('{{ {} }} -> {} -> {{ {} }}\n'.format(
-                ', '.join(block.previous_blocks), block_label, ', '.join(block.following_blocks)))
+            self.add_appearances(block)
 
         for block in blocks:
             self.calculate_code(block)
@@ -151,99 +114,28 @@ class RegOptimiser:
 
         return blocks
 
-    def add_strings(self):
-        quad = QEmpty()
-        if not self.strings:
-            return quad
-
-        quad.code.append('.data')
-        for label, val in self.strings:
-            if val == '':
-                val = '""'
-            quad.code.append('    {}: .string {}'.format(label, val))
-
-        return quad
-
-    def calculate_alive_all(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
-        map_label = {}
-        n = len(blocks)
-
-        for i in range(n):
-            block_label = blocks[i].quads[0].name
-            map_label[block_label] = i
-
-        for i in range(n):
-            prev_quad = blocks[i - 1].quads[-1]
-            if i > 0 and not isinstance(prev_quad, QFunEnd) and \
-                    (not isinstance(prev_quad, QJump) or prev_quad.op != 'jmp'):
-                blocks[i].add_previous(blocks[i - 1].quads[0].name)
-                blocks[i - 1].add_following(blocks[i].quads[0].name)
-
-            act_quad = blocks[i].quads[-1]
-            if isinstance(act_quad, QJump):
-                blocks[i].add_following(act_quad.name)
-                jmp_indx = map_label[act_quad.name]
-                blocks[jmp_indx].add_previous(blocks[i].quads[0].name)
-
-        for i in range(n):
-            que = [i]
-
-            while len(que) != 0:
-                x = que.pop()
-
-                old_state = blocks[x].quads[0].alive.copy()
-                blocks[x] = self.calculate_alive(blocks[x])
-                new_state = blocks[x].quads[0].alive.copy()
-
-                if old_state != new_state or len(blocks[x].quads) == 1:
-                    for prev_name in blocks[x].previous_blocks:
-                        prev_number = map_label[prev_name]
-                        if prev_number != x:
-                            blocks[prev_number].quads[-1].alive.union(new_state)
-                            que.append(prev_number)
-
-        return blocks
-
-    def calculate_alive(self, block: SmallBlock):
-        alive_set = block.quads[-1].alive.copy()
-        ln = len(block.quads)
-        for i, quad in enumerate(block.quads[-1::-1]):
-            block.quads[ln - i - 1].alive = alive_set.copy()
+    def add_appearances(self, block: SmallBlock):
+        for _, quad in enumerate(block.quads):
             self.line += 1
             quad.line = self.line
 
-            if isinstance(quad, QJump):
+            if isinstance(quad, (QJump, QFunBegin, QFunCall)):
                 pass
             elif isinstance(quad, QCmp):
-                alive_set.add(quad.var1)
-                alive_set.add(quad.var2)
                 self.add_appearance(quad.var1)
                 self.add_appearance(quad.var2)
             elif isinstance(quad, QReturn):
-                alive_set.add(quad.var)
                 self.add_appearance(quad.var)
             elif isinstance(quad, QEq):
-                alive_set.discard(quad.var1)
-                alive_set.add(quad.var2)
                 self.add_appearance(quad.var2)
-            elif isinstance(quad, QFunBegin):
-                pass
-            elif isinstance(quad, QFunEnd):
-                pass
+                self.add_appearance(quad.var1)
             elif isinstance(quad, QFunCall):
-                alive_set.discard(quad.var)
                 for arg in quad.args:
-                    alive_set.add(arg)
                     self.add_appearance(arg)
             elif isinstance(quad, QBinOp):
-                alive_set.discard(quad.res)
-                alive_set.add(quad.var1)
-                alive_set.add(quad.var2)
                 self.add_appearance(quad.var1)
                 self.add_appearance(quad.var2)
             elif isinstance(quad, QUnOp):
-                alive_set.discard(quad.res)
-                alive_set.add(quad.var)
                 self.add_appearance(quad.var)
         return block
 
@@ -251,6 +143,24 @@ class RegOptimiser:
         if var not in self.appearances:
             self.appearances[var] = []
         self.appearances[var].append(self.line)
+
+    def add_string(self, key):
+        if key not in self.strings:
+            self.strings[key] = '_string_{}'.format(self.string_counter)
+            self.string_counter += 1
+
+    def add_strings(self):
+        quad = QEmpty()
+        if not self.strings:
+            return quad
+
+        quad.code.append('.data')
+        for val, label in self.strings.items():
+            if val == '':
+                val = '""'
+            quad.code.append('    {}: .string {}'.format(label, val))
+
+        return quad
 
     def calculate_code(self, block: SmallBlock) -> SmallBlock:
         place_holder = block.quads
@@ -294,15 +204,15 @@ class RegOptimiser:
                 block.quads.append(quad_empty)
             elif isinstance(quad, QEq):
                 # Second argument is a number
-                if quad.var2.isnumeric():
+                if quad.var2.isnumeric() or quad.var2.startswith("-") and quad.var2[1:].isnumeric():
                     block, quad, var_reg = self.get_free_register(block, quad)
                     quad.code.append('    movq ${}, {}'.format(int(quad.var2), var_reg))
                 # Second argument is a string
                 elif quad.var2 == '' or quad.var2[0] == '"':
-                    self.strings.append((quad.var1 + '__str', quad.var2))
+                    self.add_string(quad.var2)
                     block, quad, var_reg = self.get_free_register(block, quad)
 
-                    quad.code.append('    movq ${}, {}'.format(quad.var1 + '__str', var_reg))
+                    quad.code.append('    movq ${}, {}'.format(self.strings[quad.var2], var_reg))
                 elif quad.var2 in arg_registers:
                     block, quad, var_reg = self.get_free_register(block, quad)
 
