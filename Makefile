@@ -10,7 +10,7 @@ latte: create_env
 	java -jar lib/antlr-4.9-complete.jar -Dlanguage=Python3 -o antlr Latte.g4
 
 zip:
-	tar -czf mk394332.tar.gz FrontEnd.py Latte.g4 Latte.py latc_x86_64 Makefile test.py utils.py Simplifier.py Code4.py RegOptimiser.py lib/ lattests/ Vars.py Quads.py Blocks.py
+	tar -czf mk394332.tar.gz FrontEnd.py Latte.g4 Latte.py latc_x86_64 Makefile test.py utils.py Simplifier.py Code4.py RegOptimiser.py lib/ lattests/ Vars.py Quads.py Blocks.py README
 
 ifeq (test,$(firstword $(MAKECMDGOALS)))
   RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))

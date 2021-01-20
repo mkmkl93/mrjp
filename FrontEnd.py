@@ -166,7 +166,7 @@ class FrontEnd:
             
         val = self.enter_expr(ctx.expr())
         if val.type != ret_type:
-            self.error(ctx, "Returning wrong type\nExpected " + ret_type + " got " + val.type)
+            self.error(ctx, "Returning wrong type\nExpected " + ret_type + " got " + str(val.type))
 
     def enter_vret(self, ctx: LatteParser.VRetContext, ret_type) -> None:
         if ret_type != "void":

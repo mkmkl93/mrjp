@@ -8,7 +8,7 @@ from utils import *
 def get_mem_loc(var: str) -> str:
     m = re.match(r'.*_t(\d*)', var)
     if m:
-        var_loc = '-{}(%rbp)'.format(8 * int(m.group(1)))
+        var_loc = '-{}(%rbp)'.format(8 * (5 + int(m.group(1))))
     else:
         var_loc = var
 
@@ -32,6 +32,7 @@ def clear_block(block: SmallBlock, quad: Quad) -> (SmallBlock, Quad):
                 var_loc = get_mem_loc(var)
                 if var_loc not in block.table[var] and var in quad.alive:
                     quad.code.append('    movq {}, {}'.format(reg, var_loc))
+                block.table[var].discard(reg)
             block.table[reg] = set()
     return block, quad
 
@@ -274,7 +275,9 @@ class RegOptimiser:
                     var1_loc = get_anything(block, quad.var1)
                     block, quad, var2_loc = self.get_register(block, quad, quad.var2)
 
-                quad.code.append('    cmp {}, {}'.format(var2_loc, var1_loc))
+                op = "cmp" if is_register(var1_loc) or is_register(var2_loc) else "cmpq"
+
+                quad.code.append('    {} {}, {}'.format(op, var2_loc, var1_loc))
 
                 block.quads.append(quad)
             elif isinstance(quad, QReturn):
@@ -354,15 +357,18 @@ class RegOptimiser:
                 if quad.var in quad.alive:
                     block, quad, free_reg = self.get_free_register(block, quad)
                     quad.code.append('    movq %rax, {}'.format(free_reg))
+                    quad_store = store_caller(block, QEmpty())
+                    quad_restore = restore_caller(block, QEmpty())
                     block.table[free_reg].add(quad.var)
                     block.table[quad.var].add(free_reg)
+                else:
+                    quad_store = store_caller(block, QEmpty())
+                    quad_restore = restore_caller(block, QEmpty())
 
                 for arg in quad.args:
                     if arg not in quad.alive:
                         clear_var(block, arg)
-
-                quad_store = store_caller(block, QEmpty())
-                quad_restore = restore_caller(block, QEmpty())
+                        
                 quad_restore.alive = quad.alive
                 quad_store.alive = place_holder[i - 1].alive
                 block.quads.append(quad_store)
