@@ -57,23 +57,24 @@ class QLabel(Quad):
 
 
 class QJump(Quad):
-    def __init__(self, op, name):
+    def __init__(self, name):
         super().__init__()
+        self.name = name
+
+    def __str__(self):
+        return 'jmp {}'.format(self.name).ljust(40) + super().__str__()
+
+
+class QCmp(Quad):
+    def __init__(self, op, var1, var2, name):
+        super().__init__()
+        self.var1 = var1
+        self.var2 = var2
         self.op = op
         self.name = name
 
     def __str__(self):
-        return '{} {}'.format(self.op, self.name).ljust(40) + super().__str__()
-
-
-class QCmp(Quad):
-    def __init__(self, var1, var2):
-        super().__init__()
-        self.var1 = var1
-        self.var2 = var2
-
-    def __str__(self):
-        return 'cmp {}, {}'.format(self.var1, self.var2).ljust(40) + super().__str__()
+        return '{} {} {} -> {}'.format(self.op, self.var1, self.var2, self.name).ljust(40) + super().__str__()
 
 
 class QReturn(Quad):

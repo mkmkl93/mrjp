@@ -33,7 +33,7 @@ def clear_block(block: SmallBlock, quad: Quad) -> (SmallBlock, Quad):
                 if var_loc not in block.table[var] and var in quad.alive:
                     quad.code.append('    movq {}, {}'.format(reg, var_loc))
                 block.table[var].discard(reg)
-            block.table[reg] = set()
+        block.table[reg] = set()
     return block, quad
 
 
@@ -173,7 +173,7 @@ class RegOptimiser:
                 quad.code.append(quad.name + ':')
                 block.quads.append(quad)
             elif isinstance(quad, QJump):
-                quad.code.append('    {} {}'.format(quad.op, quad.name))
+                quad.code.append('    jmp {}'.format(quad.name))
                 block.quads.append(quad)
             elif isinstance(quad, QCmp):
                 # Both don't have registers and the the first one will be alive while the second won't be
@@ -188,6 +188,7 @@ class RegOptimiser:
                 op = "cmp" if is_register(var1_loc) or is_register(var2_loc) else "cmpq"
 
                 quad.code.append('    {} {}, {}'.format(op, var2_loc, var1_loc))
+                quad.code.append('    {} {}'.format(quad.op, quad.name))
 
                 block.quads.append(quad)
             elif isinstance(quad, QReturn):
@@ -399,8 +400,9 @@ class RegOptimiser:
         block, quad_clear_block = clear_block(block, quad_clear_block)
 
         # If last quad is jump
-        if isinstance(block.quads[-1], QJump):
-            block.quads.insert(len(block.quads) - 1, quad_clear_block)
+        if isinstance(block.quads[-1], (QJump, QCmp)):
+            for code in quad_clear_block.code:
+                block.quads[-1].code.insert(len(block.quads[-1].code) - 1, code)
         else:
             block.quads.append(quad_clear_block)
 

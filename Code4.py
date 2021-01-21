@@ -224,7 +224,7 @@ class Code4:
 
             block.add_quad(QLabel(label1))
             block.add_quad(QEq(var_name, '1'))
-            block.add_quad(QJump('jmp', label3))
+            block.add_quad(QJump(label3))
             block.add_quad(QLabel(label2))
             block.add_quad(QEq(var_name, '0'))
             block.add_quad(QLabel(label3))
@@ -249,16 +249,16 @@ class Code4:
         block = self.enter_stmt(ctx.stmt(), block)
         self.envs.pop()
 
-        block.add_quad(QJump('jmp', while_name))
+        block.add_quad(QJump(while_name))
         block.add_quad(QLabel(while_end))
 
         return block
 
     def enter_lazy_expr(self, ctx: LatteParser.ExprContext, block, pos_label, neg_label) -> Block:
         if isinstance(ctx, LatteParser.ETrueContext):
-            block.add_quad(QJump('jmp', pos_label))
+            block.add_quad(QJump(pos_label))
         elif isinstance(ctx, LatteParser.EFalseContext):
-            block.add_quad(QJump('jmp', neg_label))
+            block.add_quad(QJump(neg_label))
         elif isinstance(ctx, LatteParser.EAndContext):
             exp1 = ctx.expr(0)
             exp2 = ctx.expr(1)
@@ -275,7 +275,7 @@ class Code4:
             label = block.give_label()
 
             block = self.enter_lazy_expr(exp1, block, pos_label, label)
-            block.add_quad(QJump('jmp', pos_label))
+            block.add_quad(QJump(pos_label))
             block.add_quad(QLabel(label))
             block = self.enter_lazy_expr(exp2, block, pos_label, neg_label)
         elif isinstance(ctx, LatteParser.ERelOpContext):
@@ -300,16 +300,18 @@ class Code4:
             elif rel_op == '!=':
                 op = 'je'
 
-            block.add_quad(QCmp(val1.loc, val2.loc))
-            block.add_quad(QJump(op, neg_label))
+            block.add_quad(QCmp(op, val1.loc, val2.loc, neg_label))
         elif isinstance(ctx, LatteParser.EParenContext):
             block = self.enter_lazy_expr(ctx.expr(), block, pos_label, neg_label)
-        else:
+        elif isinstance(ctx, (LatteParser.EIdContext, LatteParser.EFunCallContext)):
             var, block = self.enter_expr(ctx, block)
 
-            block.add_quad(QCmp(var.loc, '1'))
-            block.add_quad(QJump('jne', neg_label))
-            block.add_quad(QJump('jmp', pos_label))
+            block.add_quad(QCmp('jne', var.loc, '1', neg_label))
+            block.add_quad(QJump(pos_label))
+        elif isinstance(ctx, LatteParser.EUnOpContext):
+            block = self.enter_lazy_expr(ctx.expr(), block, neg_label, pos_label)
+        else:
+            self.error(ctx, "Unresolved instance in enter_lazy_expr")
         return block
 
     def enter_ass(self, ctx: LatteParser.AssContext, block) -> Block:
@@ -330,7 +332,6 @@ class Code4:
 
         for env in self.envs[::-1]:
             if var_name in env:
-                name = block.give_var_name()
                 block.add_quad(QUnOp(env[var_name].loc, '++', env[var_name].loc))
                 return block
 
@@ -373,7 +374,7 @@ class Code4:
         self.envs.append({})
         block.add_quad(QLabel(if_true))
         block = self.enter_stmt(ctx.stmt(0), block)
-        block.add_quad(QJump('jmp', if_end))
+        block.add_quad(QJump(if_end))
         self.envs.pop()
 
         self.envs.append({})

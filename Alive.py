@@ -75,13 +75,12 @@ class Alive:
 
         for i in range(n):
             prev_quad = blocks[i - 1].quads[-1]
-            if i > 0 and not isinstance(prev_quad, QFunEnd) and \
-                    (not isinstance(prev_quad, QJump) or prev_quad.op != 'jmp'):
+            if i > 0 and not isinstance(prev_quad, QFunEnd) and not isinstance(prev_quad, QJump):
                 blocks[i].add_previous(blocks[i - 1].quads[0].name)
                 blocks[i - 1].add_following(blocks[i].quads[0].name)
 
             act_quad = blocks[i].quads[-1]
-            if isinstance(act_quad, QJump):
+            if isinstance(act_quad, (QCmp, QJump)):
                 blocks[i].add_following(act_quad.name)
                 jmp_indx = map_label[act_quad.name]
                 blocks[jmp_indx].add_previous(blocks[i].quads[0].name)

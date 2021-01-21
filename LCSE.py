@@ -22,11 +22,11 @@ class LCSE:
 
     def optimise(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
         blocks = self.compress_values(blocks)
-        # while self.repeat:
-        #     self.repeat = False
-        #     blocks = self.lcse(blocks)
-        #     blocks = self.propagate_in_blocks(blocks)
-            # self.repeat = False
+        while self.repeat:
+            self.repeat = False
+            # blocks = self.lcse(blocks)
+            # blocks = self.propagate_in_blocks(blocks)
+            self.repeat = False
 
         return blocks
 
@@ -58,7 +58,7 @@ class LCSE:
                     else:
                         self.repeat = True
                 else:
-                    self.debug("Shouldn't be here clear_block")
+                    self.debug("Shouldn't be here clear_blocks clear_block")
                     sys.exit(1)
 
             return block
@@ -100,6 +100,11 @@ class LCSE:
                 elif isinstance(quad, QUnOp):
                     if quad.res == replace_from:
                         return
+                elif isinstance(quad, QCmp):
+                    if quad.var1 == replace_from:
+                        block.quads[i].var1 = replace_to
+                    if quad.var2 == replace_from:
+                        block.quads[i].var2 = replace_to
                 else:
                     self.debug("Shouldn't be here compress_block replace_in_block")
                     sys.exit(1)
@@ -158,7 +163,7 @@ class LCSE:
             def replace_in_block(start: int, replace_from: (str, str, str), replace_to: str) -> None:
                 for i in range(start, len(block.quads)):
                     quad = block.quads[i]
-                    if isinstance(quad, (QJump, QFunBegin, QLabel, QReturn, QUnOp)):
+                    if isinstance(quad, (QJump, QFunBegin, QLabel, QReturn, QUnOp, QCmp)):
                         pass
                     elif isinstance(quad, QBinOp):
                         if (quad.var1, quad.op, quad.var2) == replace_from:
@@ -180,7 +185,7 @@ class LCSE:
                 elif isinstance(quad, QBinOp):
                     replace_in_block(i + 1, quad.res, quad.res)
                 else:
-                    self.debug("Shouldn't be here clear_block")
+                    self.debug("Shouldn't be here lcse lcse_block")
                     sys.exit(1)
 
                 block.quads.append(quad)
@@ -225,6 +230,11 @@ class LCSE:
                     elif isinstance(quad, QUnOp):
                         if quad.res == replace_from:
                             return
+                    elif isinstance(quad, QCmp):
+                        if quad.var1 == replace_from:
+                            block.quads[i].var1 = replace_to
+                        if quad.var2 == replace_from:
+                            block.quads[i].var2 = replace_to
                     else:
                         self.debug("Shouldn't be here propagate_in_block replace_in_block")
                         sys.exit(1)
