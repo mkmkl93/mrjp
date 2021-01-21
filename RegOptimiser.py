@@ -127,8 +127,8 @@ class RegOptimiser:
             elif isinstance(quad, QReturn):
                 self.add_appearance(quad.var)
             elif isinstance(quad, QEq):
-                self.add_appearance(quad.var2)
-                self.add_appearance(quad.var1)
+                self.add_appearance(quad.res)
+                self.add_appearance(quad.var)
             elif isinstance(quad, QFunCall):
                 for arg in quad.args:
                     self.add_appearance(arg)
@@ -204,29 +204,29 @@ class RegOptimiser:
                 block.quads.append(quad_empty)
             elif isinstance(quad, QEq):
                 # Second argument is a number
-                if quad.var2.isnumeric() or quad.var2.startswith("-") and quad.var2[1:].isnumeric():
+                if quad.var.isnumeric() or quad.var.startswith("-") and quad.var[1:].isnumeric():
                     block, quad, var_reg = self.get_free_register(block, quad)
-                    quad.code.append('    movq ${}, {}'.format(int(quad.var2), var_reg))
+                    quad.code.append('    movq ${}, {}'.format(int(quad.var), var_reg))
                 # Second argument is a string
-                elif quad.var2 == '' or quad.var2[0] == '"':
-                    self.add_string(quad.var2)
+                elif quad.var == '' or quad.var[0] == '"':
+                    self.add_string(quad.var)
                     block, quad, var_reg = self.get_free_register(block, quad)
 
-                    quad.code.append('    movq ${}, {}'.format(self.strings[quad.var2], var_reg))
-                elif quad.var2 in arg_registers:
+                    quad.code.append('    movq ${}, {}'.format(self.strings[quad.var], var_reg))
+                elif quad.var in arg_registers:
                     block, quad, var_reg = self.get_free_register(block, quad)
 
-                    quad.code.append('    mov {}, {}'.format(quad.var2, var_reg))
+                    quad.code.append('    mov {}, {}'.format(quad.var, var_reg))
                 else:
-                    block, quad, var_reg = self.get_register(block, quad, quad.var2)
-                    if quad.var2 not in quad.alive:
-                        block.table[quad.var2] = set()
-                        block.table[var_reg].discard(quad.var2)
+                    block, quad, var_reg = self.get_register(block, quad, quad.var)
+                    if quad.var not in quad.alive:
+                        block.table[quad.var] = set()
+                        block.table[var_reg].discard(quad.var)
 
-                if quad.var1 in quad.alive:
-                    block = clear_var(block, quad.var1)
-                    block.table[var_reg].add(quad.var1)
-                    block.table[quad.var1].add(var_reg)
+                if quad.res in quad.alive:
+                    block = clear_var(block, quad.res)
+                    block.table[var_reg].add(quad.res)
+                    block.table[quad.res].add(var_reg)
 
                 block.quads.append(quad)
             elif isinstance(quad, QFunBegin):
@@ -264,13 +264,13 @@ class RegOptimiser:
                 if len(quad.args) > 6:
                     quad.code.append('    add ${}, %rsp'.format(8 * (len(quad.args) - 6)))
 
-                if quad.var in quad.alive:
+                if quad.res in quad.alive:
                     block, quad, free_reg = self.get_free_register(block, quad)
                     quad.code.append('    movq %rax, {}'.format(free_reg))
                     quad_store = store_caller(block, QEmpty())
                     quad_restore = restore_caller(block, QEmpty())
-                    block.table[free_reg].add(quad.var)
-                    block.table[quad.var].add(free_reg)
+                    block.table[free_reg].add(quad.res)
+                    block.table[quad.res].add(free_reg)
                 else:
                     quad_store = store_caller(block, QEmpty())
                     quad_restore = restore_caller(block, QEmpty())

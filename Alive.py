@@ -121,14 +121,14 @@ class Alive:
             elif isinstance(quad, QReturn):
                 alive_set.add(quad.var)
             elif isinstance(quad, QEq):
-                alive_set.discard(quad.var1)
-                alive_set.add(quad.var2)
+                alive_set.discard(quad.res)
+                alive_set.add(quad.var)
             elif isinstance(quad, QFunBegin):
                 pass
             elif isinstance(quad, QFunEnd):
                 pass
             elif isinstance(quad, QFunCall):
-                alive_set.discard(quad.var)
+                alive_set.discard(quad.res)
                 for arg in quad.args:
                     alive_set.add(arg)
             elif isinstance(quad, QBinOp):

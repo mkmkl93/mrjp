@@ -83,19 +83,19 @@ class QReturn(Quad):
 
     def __str__(self):
         if self.var is None:
-            return 'return {}'.format(super().__str__())
+            return 'return'.ljust(40) + super().__str__()
         else:
             return 'return {}'.format(self.var).ljust(40) + super().__str__()
 
 
 class QEq(Quad):
-    def __init__(self, var1, var2):
+    def __init__(self, res, var):
         super().__init__()
-        self.var1 = var1
-        self.var2 = var2
+        self.res = res
+        self.var = var
 
     def __str__(self):
-        return '{} = {}'.format(self.var1, self.var2).ljust(40) + super().__str__()
+        return '{} = {}'.format(self.res, self.var).ljust(40) + super().__str__()
 
 
 class QFunBegin(Quad):
@@ -121,17 +121,17 @@ class QFunEnd(Quad):
 
 
 class QFunCall(Quad):
-    def __init__(self, name, var, args):
+    def __init__(self, name, res, args):
         super().__init__()
-        self.var = var
+        self.res = res
         self.name = name
         self.args = args
 
     def __str__(self):
-        if self.var is None:
+        if self.res is None:
             return 'call {} {}'.format(self.name, ' '.join(self.args)).ljust(40) + super().__str__()
         else:
-            return '{} = call {} {}'.format(self.var, self.name, ' '.join(self.args)).ljust(40) + super().__str__()
+            return '{} = call {} {}'.format(self.res, self.name, ' '.join(self.args)).ljust(40) + super().__str__()
 
 
 class QBinOp(Quad):

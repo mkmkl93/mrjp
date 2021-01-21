@@ -22,3 +22,6 @@ uprzedniego uruchomienia całego programu. Zatem wybrałem heurestykę, że dla 
 liniach ona wystąpiła i w razie potrzeby wrzucam do pamięci rejestr w którym najwcześniejsza zmienna występuje
 najpóźniej. Nie potrafiłem zoptymalizować kodu przy użyciu rejestrów opierając się na kodzie maszynowym, przez co
 zastąpiłem tłumaczenie każdej czwórki oddzielnie i niezależnie, na sposób uzależniony od reszty bloku.
+
+Zmiany do 2 terminu:
+Dodanie zwijanie stałych, usuwanie martwego kodu, LCSE.

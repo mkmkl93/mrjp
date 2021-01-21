@@ -7,8 +7,8 @@ from utils import *
 class LCSE:
     def __init__(self, debug):
         self.dbug = debug
-        self.appear_counter = {}
         self.known_value = {}
+        self.repeat = True
 
     def debug(self, msg) -> None:
         if self.dbug:
@@ -22,13 +22,15 @@ class LCSE:
 
     def optimise(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
         blocks = self.compress_values(blocks)
+        # while self.repeat:
+        #     self.repeat = False
+        #     blocks = self.lcse(blocks)
+        #     blocks = self.propagate_in_blocks(blocks)
+            # self.repeat = False
 
         return blocks
 
     def compress_values(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
-        for block in blocks:
-            self.count_left_appearances(block)
-
         placeholder = blocks
         blocks = []
         for block in placeholder:
@@ -39,84 +41,74 @@ class LCSE:
         return blocks
 
     def clear_blocks(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
+        def clear_block(block: SmallBlock) -> SmallBlock:
+            placeholder = block.quads
+            block.quads = []
+            for quad in placeholder:
+                if isinstance(quad, (QJump, QFunBegin, QFunCall, QCmp, QReturn, QFunEnd, QLabel)):
+                    block.quads.append(quad)
+                elif isinstance(quad, QEq):
+                    if quad.res in quad.alive:
+                        block.quads.append(quad)
+                    else:
+                        self.repeat = True
+                elif isinstance(quad, (QBinOp, QUnOp)):
+                    if quad.res in quad.alive:
+                        block.quads.append(quad)
+                    else:
+                        self.repeat = True
+                else:
+                    self.debug("Shouldn't be here clear_block")
+                    sys.exit(1)
+
+            return block
         alive = Alive(self.dbug)
         blocks = alive.optimise(blocks)
 
-        placeholder = blocks
-        blocks = []
-        for block in placeholder:
-            blocks.append(self.clear_block(block))
+        for i, block in enumerate(blocks):
+            blocks[i] = clear_block(block)
 
         return blocks
 
-    def clear_block(self, block: SmallBlock) -> SmallBlock:
-        placeholder = block.quads
-        block.quads = []
-        for quad in placeholder:
-            if isinstance(quad, (QJump, QFunBegin, QFunCall, QCmp, QReturn, QFunEnd, QLabel)):
-                block.quads.append(quad)
-            elif isinstance(quad, QEq):
-                if quad.var1 in quad.alive:
-                    block.quads.append(quad)
-            elif isinstance(quad, (QBinOp, QUnOp)):
-                if quad.res in quad.alive:
-                    block.quads.append(quad)
-            else:
-                self.debug("Shouldn't be here clear_block")
-                sys.exit(1)
-
-        return block
-
-    def count_left_appearances(self, block: SmallBlock) -> None:
-        for quad in block.quads:
-            if isinstance(quad, (QJump, QFunBegin, QFunCall, QCmp, QReturn, QFunEnd, QLabel)):
-                pass
-            elif isinstance(quad, QEq):
-                self.add_appearance(quad.var1)
-            elif isinstance(quad, QFunCall):
-                self.add_appearance(quad.var)
-            elif isinstance(quad, QBinOp):
-                self.add_appearance(quad.res)
-            elif isinstance(quad, QUnOp):
-                self.add_appearance(quad.res)
-            else:
-                self.debug("Shouldn't be here count_left_appearances")
-                sys.exit(1)
-
-    def add_appearance(self, var):
-        if var not in self.appear_counter:
-            self.appear_counter[var] = 0
-        self.appear_counter[var] += 1
-
-    def is_forbidden(self, var: str) -> bool:
-        return var in self.appear_counter and self.appear_counter[var] > 1
-
-    def is_to_compress(self, var: str) -> bool:
-        if is_const(var):
-            self.known_value[var] = var
-
-        return var in self.known_value and not self.is_forbidden(var)
-
     def compress_block(self, block: SmallBlock) -> SmallBlock:
-        placeholder = block.quads
-        block.quads = []
-        for quad in placeholder:
-            if isinstance(quad, (QJump, QFunBegin, QLabel)):
+        def replace_in_block(start: int, replace_from: str, replace_to: str):
+            for i in range(start, len(block.quads)):
+                quad = block.quads[i]
+                if isinstance(quad, (QJump, QFunBegin, QLabel)):
+                    pass
+                elif isinstance(quad, QEq):
+                    if quad.var == replace_from:
+                        block.quads[i].res = replace_to
+                    if quad.res == replace_from:
+                        return
+                elif isinstance(quad, QBinOp):
+                    if quad.var1 == replace_from:
+                        block.quads[i].var1 = replace_to
+                    if quad.var2 == replace_from:
+                        block.quads[i].var2 = replace_to
+                    if quad.res == replace_from:
+                        return
+                elif isinstance(quad, QFunCall):
+                    for j, arg in quad.args:
+                        if arg == replace_from:
+                            block.quads[i].args[j] = replace_to
+                    if quad.res == replace_from:
+                        return
+                elif isinstance(quad, QReturn):
+                    if quad.var is not None and quad.var == replace_from:
+                        block.quads[i].res = replace_to
+                elif isinstance(quad, QUnOp):
+                    if quad.res == replace_from:
+                        return
+                else:
+                    self.debug("Shouldn't be here compress_block replace_in_block")
+                    sys.exit(1)
+
+        for i, quad in enumerate(block.quads):
+            if isinstance(quad, (QJump, QFunBegin, QLabel, QReturn, QEq, QFunCall)):
                 pass
-            elif isinstance(quad, QReturn):
-                if quad.var is not None and quad.var.isnumeric():
-                    quad = QReturn(self.known_value[quad.var])
-            elif isinstance(quad, QEq):
-                if self.is_to_compress(quad.var2):
-
-                    quad = QEq(quad.var1, self.known_value[quad.var2])
-
-                    self.known_value[quad.var1] = quad.var2
-            elif isinstance(quad, QFunCall):
-                if quad.name in self.known_value:
-                    quad = QEq(quad.var, self.known_value[quad.name])
             elif isinstance(quad, QBinOp):
-                if self.is_to_compress(quad.var1) and self.is_to_compress(quad.var2):
+                if is_const(quad.var1) and is_const(quad.var2):
                     if quad.op == '+' and quad.typ == 'string':
                         res_value = str(self.known_value[quad.var1][1:-1]) + str(self.known_value[quad.var2][1:-1])
                     elif quad.op == '+' and quad.typ == 'int':
@@ -141,11 +133,11 @@ class LCSE:
                     if quad.typ == 'string':
                         res_value = '"' + res_value + '"'
 
-                    self.known_value[quad.res] = res_value
-                    quad = QEq(quad.res, res_value)
-
+                    replace_in_block(i + 1, quad.res, res_value)
+                    block.quads[i] = QEq(quad.res, res_value)
+                    self.repeat = True
             elif isinstance(quad, QUnOp):
-                if self.is_to_compress(quad.var):
+                if is_const(quad.var):
                     if quad.op == '-':
                         res_value = - int(self.known_value[quad.var])
                     elif quad.op == '!':
@@ -155,12 +147,111 @@ class LCSE:
                         sys.exit(1)
                     res_value = str(res_value)
 
-                    self.known_value[quad.res] = res_value
-                    quad = QEq(quad.res, res_value)
-
-            block.quads.append(quad)
+                    replace_in_block(i + 1, quad.res, res_value)
+                    block.quads[i] = QEq(quad.res, res_value)
+                    self.repeat = True
 
         return block
+
+    def lcse(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
+        def lcse_block(block: SmallBlock) -> SmallBlock:
+            def replace_in_block(start: int, replace_from: (str, str, str), replace_to: str) -> None:
+                for i in range(start, len(block.quads)):
+                    quad = block.quads[i]
+                    if isinstance(quad, (QJump, QFunBegin, QLabel, QReturn, QUnOp)):
+                        pass
+                    elif isinstance(quad, QBinOp):
+                        if (quad.var1, quad.op, quad.var2) == replace_from:
+                            block.quads[i] = QEq(quad.res, replace_to)
+                        if quad.res in list(replace_from):
+                            return
+                    elif isinstance(quad, (QEq, QFunCall, QUnOp)):
+                        if quad.res in list(replace_from):
+                            return
+                    else:
+                        self.debug("Shouldn't be here lcse_block replace_in_block")
+                        sys.exit(1)
+
+            placeholder = block.quads
+            block.quads = []
+            for i, quad in enumerate(placeholder):
+                if isinstance(quad, (QJump, QFunBegin, QFunEnd, QLabel, QUnOp, QReturn, QFunCall, QEq)):
+                    pass
+                elif isinstance(quad, QBinOp):
+                    replace_in_block(i + 1, quad.res, quad.res)
+                else:
+                    self.debug("Shouldn't be here clear_block")
+                    sys.exit(1)
+
+                block.quads.append(quad)
+
+            return block
+
+        for i, block in enumerate(blocks):
+            blocks[i] = lcse_block(block)
+
+        blocks = self.clear_blocks(blocks)
+
+        return blocks
+
+    def propagate_in_blocks(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
+        def propagate_in_block(block: SmallBlock) -> SmallBlock:
+            def replace_in_block(start: int, replace_from: str, replace_to: str) -> None:
+                for i in range(start, len(block.quads)):
+                    quad = block.quads[i]
+                    if isinstance(quad, (QJump, QFunBegin, QFunEnd, QLabel)):
+                        pass
+                    elif isinstance(quad, QEq):
+                        if quad.var == replace_from:
+                            replace_in_block(i + 1, quad.res, replace_to)
+                        if quad.res == replace_from:
+                            return
+                    elif isinstance(quad, QBinOp):
+                        if quad.var1 == replace_from:
+                            block.quads[i].var1 = replace_to
+                        if quad.var2 == replace_from:
+                            block.quads[i].var2 = replace_to
+                        if quad.res == replace_from:
+                            return
+                    elif isinstance(quad, QFunCall):
+                        for j, arg in enumerate(quad.args):
+                            if arg == replace_from:
+                                block.quads[i].args[j] = replace_to
+                        if quad.res == replace_from:
+                            return
+                    elif isinstance(quad, QReturn):
+                        if quad.var is not None and quad.var == replace_from:
+                            block.quads[i].res = replace_to
+                    elif isinstance(quad, QUnOp):
+                        if quad.res == replace_from:
+                            return
+                    else:
+                        self.debug("Shouldn't be here propagate_in_block replace_in_block")
+                        sys.exit(1)
+
+            for i, quad in enumerate(block.quads):
+                if isinstance(quad, (QJump, QFunBegin, QFunEnd, QLabel, QUnOp, QReturn, QFunCall, QBinOp)):
+                    pass
+                elif isinstance(quad, QEq):
+                    if not is_register(quad.var):
+                        replace_in_block(i + 1, quad.res, quad.var)
+                else:
+                    self.debug("Shouldn't be here clear_block")
+                    sys.exit(1)
+
+            return block
+
+        for i, block in enumerate(blocks):
+            blocks[i] = propagate_in_block(block)
+
+        blocks = self.clear_blocks(blocks)
+
+        return blocks
+
+
+
+
+
 
 
 def calculate_mod(a: int, b: int) -> int:
