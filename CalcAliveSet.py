@@ -3,7 +3,7 @@ from typing import List
 import sys
 from utils import *
 
-class Alive:
+class CalcAliveSet:
     def __init__(self, debug):
         self.dbug = debug
         self.code = []
@@ -17,7 +17,7 @@ class Alive:
         if self.dbug:
             sys.stderr.write(msg)
 
-    def optimise(self, blocks: List[Block]) -> List[SmallBlock]:
+    def calc(self, blocks: List[Block]) -> List[SmallBlock]:
         quads = []
         for block in blocks:
             quads = self.get_quads(block, quads)

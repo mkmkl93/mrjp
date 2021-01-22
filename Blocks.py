@@ -1,5 +1,6 @@
 from Quads import *
 import re
+import sys
 
 arg_registers = ['%rdi', '%rsi', '%rdx', '%rcx', '%r8', '%r9']
 
@@ -14,8 +15,7 @@ def is_register(var) -> bool:
 
 
 def is_mem_loc(var) -> bool:
-    m = re.match(r'-?\d*\(%rbp\)', var)
-    return False
+    return re.match(r'-?\d*\(%rbp\)', var)
 
 class Table:
     def __init__(self):
@@ -28,6 +28,56 @@ class Table:
 
     def __setitem__(self, key, value) -> None:
         self.table[key] = value
+
+
+class AliveExpr:
+    def __init__(self, d=dict()):
+        self.alive_expr = d.copy()
+        self.was_intersected = False
+
+    def __str__(self):
+        return str(self.alive_expr)
+
+    def __contains__(self, item):
+        return item in self.alive_expr
+
+    def __eq__(self, other):
+        return self.alive_expr == other.alive_expr
+
+    def __getitem__(self, item) -> set:
+        return self.alive_expr[item]
+
+    def intersection(self, other):
+        if not self.was_intersected:
+            self.alive_expr = other.alive_expr.copy()
+            self.was_intersected = True
+        else:
+            self.alive_expr = {x:self.alive_expr[x] for x in other.alive_expr if x in self.alive_expr}
+
+    def add(self, key, value):
+        self.alive_expr[key] = value
+
+    def discard(self, delete):
+        placeholder = self.alive_expr
+        self.alive_expr = {}
+        for key, value in placeholder.items():
+            if len(list(key)) == 1:
+                if delete not in [key, value]:
+                    self.alive_expr[key] = value
+            elif len(list(key)) == 2:
+                _, var = key
+                if delete not in [value, var]:
+                    self.alive_expr[key] = value
+            elif len(list(key)) == 3:
+                var1, _, var2 = key
+                if delete not in [value, var1, var2]:
+                    self.alive_expr[key] = value
+            else:
+                print("Shouldn't be here AliveExpr")
+                sys.exit(1)
+
+    def copy(self):
+        return AliveExpr(self.alive_expr)
 
 
 class Block:
@@ -116,6 +166,8 @@ class SmallBlock(Block):
         self.quads = []
         self.big_brother = block
         self.table = Table()
+        self.in_alive_expr = AliveExpr()
+        self.out_alive_expr = AliveExpr()
 
         for free_reg in free_registers:
             self.table[free_reg] = set()
@@ -176,7 +228,7 @@ class SmallBlock(Block):
         if not self.quads:
             return ''
         else:
-            return 'Block ' + self.name + ':\n' + '\n'.join([str(x) for x in self.quads])
+            return ('Block ' + self.name + ':').ljust(40) + str(self.in_alive_expr) + str(self.out_alive_expr) + '\n' + '\n'.join([str(x) for x in self.quads])
 
 
 

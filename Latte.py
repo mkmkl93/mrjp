@@ -8,8 +8,8 @@ from absl import app, flags
 from Simplifier import Simplifier
 from FrontEnd import FrontEnd
 from Code4 import Code4
-from LCSE import LCSE
-from Alive import Alive
+from CSE import CSE
+from CalcAliveSet import CalcAliveSet
 from RegOptimiser import RegOptimiser
 from antlr.LatteLexer import LatteLexer
 from antlr.LatteParser import LatteParser
@@ -56,8 +56,8 @@ def main(argv):
     simplifier = Simplifier(FLAGS['debug'].value)
     front_end = FrontEnd(input_file, FLAGS['debug'].value)
     code4 = Code4(FLAGS['debug'].value)
-    alive = Alive(FLAGS['debug'].value)
-    lcse = LCSE(FLAGS['debug'].value)
+    alivesets = CalcAliveSet(FLAGS['debug'].value)
+    cse = CSE(FLAGS['debug'].value)
     optimiser = RegOptimiser(FLAGS['debug'].value)
 
     front_end.enter_program(prog_tree)
@@ -70,13 +70,13 @@ def main(argv):
     debug('')
 
     debug("Podział na bloki i wylicznaie zbiorów żywych")
-    blocks_alive = alive.optimise(blocks)
+    blocks_alive = alivesets.calc(blocks)
     for block in blocks_alive:
         debug(block)
     debug('')
 
-    debug("Optymalizacje LCSE")
-    blocks_optimised = lcse.optimise(blocks_alive)
+    debug("Optymalizacje CSE")
+    blocks_optimised = cse.optimise(blocks_alive)
     for block in blocks_optimised:
         debug(block)
     debug('')

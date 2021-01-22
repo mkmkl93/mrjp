@@ -368,7 +368,6 @@ class RegOptimiser:
 
                 block.quads.append(quad)
             elif isinstance(quad, QUnOp):
-                # res_loc = self.get_register(block, quad, quad.res)
                 block, quad, res_loc = self.get_register(block, quad, quad.res)
                 var_loc = self.get_anything(block, quad.var)
 

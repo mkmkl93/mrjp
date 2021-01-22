@@ -1,10 +1,10 @@
 from typing import List
 
 import sys
-from Alive import Alive
+from CalcAliveSet import CalcAliveSet
 from utils import *
 
-class LCSE:
+class CSE:
     def __init__(self, debug):
         self.dbug = debug
         self.repeat = True
@@ -26,6 +26,7 @@ class LCSE:
             blocks = self.lcse(blocks)
             blocks = self.propagate_in_blocks(blocks)
             blocks = self.clear_blocks(blocks)
+            # blocks = self.gcse(blocks) # clear_blocks should be called before that
 
         return blocks
 
@@ -195,8 +196,8 @@ class LCSE:
         #                 self.debug("Shouldn't be here clear_blocks count_labels")
         #                 sys.exit(1)
 
-        alive = Alive(self.dbug)
-        blocks = alive.optimise(blocks)
+        alive = CalcAliveSet(self.dbug)
+        blocks = alive.calc(blocks)
 
         # count_labels()
 
@@ -307,11 +308,100 @@ class LCSE:
 
         return blocks
 
+    def gcse(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
+        def calculate_alive_exps(blocks: List[SmallBlock]) -> List[SmallBlock]:
+            def calculate_alive(block: SmallBlock, alive_set: AliveExpr) -> AliveExpr:
+                for quad in block.quads:
+                    if isinstance(quad, (QJump, QCmp, QReturn, QFunBegin, QFunEnd, QFunCall)):
+                        pass
+                    elif isinstance(quad, QEq):
+                        alive_set.add((quad.res,), quad.var)
+                        alive_set.discard(quad.res)
+                    elif isinstance(quad, QBinOp):
+                        alive_set.add((quad.var1, quad.op, quad.var2), quad.res)
+                        alive_set.discard(quad.res)
+                    elif isinstance(quad, QUnOp):
+                        alive_set.add((quad.op, quad.var), quad.res)
+                        alive_set.discard(quad.res)
+                return alive_set
 
+            map_block = {}
+            n = len(blocks)
 
+            for i in range(n):
+                map_block[blocks[i].name] = i
 
+            for block in blocks:
+                block.in_alive_expr = AliveExpr()
+                block.out_alive_expr = AliveExpr()
 
+            for i in range(n):
+                que = [i]
 
+                while len(que) != 0:
+                    x = que.pop()
+
+                    old_state = blocks[x].out_alive_expr.copy()
+                    blocks[x].out_alive_expr = calculate_alive(blocks[x], blocks[x].in_alive_expr.copy())
+                    new_state = blocks[x].out_alive_expr.copy()
+
+                    if old_state != new_state or len(blocks[x].quads) == 1:
+                        for following_name in blocks[x].following_blocks:
+                            following_number = map_block[following_name]
+                            blocks[following_number].in_alive_expr.intersection(new_state)
+                            que.append(following_number)
+            return blocks
+
+        def gcse_block(block: SmallBlock) -> SmallBlock:
+            alive_exps = block.in_alive_expr.copy()
+            for i, quad in enumerate(block.quads):
+                if isinstance(quad, (QEmpty, QJump, QFunBegin, QFunEnd, QLabel)):
+                    pass
+                elif isinstance(quad, QEq):
+                    if quad.var in alive_exps:
+                        block.quads[i].var = alive_exps[quad.var]
+                        self.repeat = True
+                    alive_exps.discard(quad.res)
+                elif isinstance(quad, QBinOp):
+                    tmp = (quad.var1, quad.op, quad.var2)
+                    if tmp in alive_exps:
+                        block.quads[i] = QEq(quad.res, alive_exps[tmp])
+                        self.repeat = True
+                    alive_exps.discard(quad.res)
+                elif isinstance(quad, QFunCall):
+                    for j, arg in enumerate(quad.args):
+                        if arg in alive_exps:
+                            block.quads[i].args[j] = alive_exps[arg]
+                            self.repeat = True
+                    alive_exps.discard(quad.res)
+                elif isinstance(quad, QReturn):
+                    if quad.var is not None and quad.var in alive_exps:
+                        block.quads[i].var = alive_exps[quad.var]
+                        self.repeat = True
+                elif isinstance(quad, QUnOp):
+                    if quad.var in alive_exps:
+                        block.quads[i].var = alive_exps[quad.var]
+                        self.repeat = True
+                    alive_exps.discard(quad.res)
+                elif isinstance(quad, QCmp):
+                    if quad.var1 in alive_exps:
+                        block.quads[i].var1 = alive_exps[quad.var1]
+                        self.repeat = True
+                    if quad.var2 in alive_exps:
+                        block.quads[i].var = alive_exps[quad.var2]
+                        self.repeat = True
+                else:
+                    self.debug("Shouldn't be here gcse_block")
+                    sys.exit(1)
+
+            return block
+
+        blocks = calculate_alive_exps(blocks)
+
+        for i, block in enumerate(blocks):
+            blocks[i] = gcse_block(block)
+
+        return blocks
 
 def calculate_mod(a: int, b: int) -> int:
     if b == 0:

@@ -1,0 +1,11 @@
+int main() {
+    int a = f();
+    int b = f();
+    printInt(a + b);
+    return 0;
+}
+
+int f() {
+	printString("f");
+	return 1;
+}
