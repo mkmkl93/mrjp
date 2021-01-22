@@ -1,11 +1,8 @@
 int main() {
-    f(5);
+    if (1 < 2) {
+    	printString("TAK");
+    } else {
+    	printString("NIE");
+    }
     return 0;
-}
-
-void f(int a) {
-    int b = a + 5;
-    int c = (a + 5) + 2;
-    printInt(a);
-    printInt(b);
 }

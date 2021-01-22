@@ -61,20 +61,6 @@ def clear_var(block: SmallBlock, var: str) -> SmallBlock:
 
     return block
 
-
-def get_anything(block: SmallBlock, var: str) -> str:
-    if is_const(var):
-        return '$' + var
-
-    # Prefer register
-    for place in block.table[var]:
-        if place in free_registers:
-            return place
-
-    # But pointer is still ok
-    return get_mem_loc(var)
-
-
 def get_prolog(quad):
     quad.code.append('    push %rbp')
     quad.code.append('    mov %rsp, %rbp')
@@ -144,6 +130,22 @@ class RegOptimiser:
             self.appearances[var] = []
         self.appearances[var].append(self.line)
 
+    def get_anything(self, block: SmallBlock, var: str) -> str:
+        if is_const(var):
+            if is_string(var):
+                self.add_string(var)
+                return '$' + self.strings[var]
+            else:
+                return '$' + var
+
+        # Prefer register
+        for place in block.table[var]:
+            if place in free_registers:
+                return place
+
+        # But pointer is still ok
+        return get_mem_loc(var)
+
     def add_string(self, key):
         if key not in self.strings:
             self.strings[key] = '_string_{}'.format(self.string_counter)
@@ -177,15 +179,15 @@ class RegOptimiser:
                 block.quads.append(quad)
             elif isinstance(quad, QCmp):
                 # Both don't have registers and the the first one will be alive while the second won't be
-                if not has_register(block, quad.var1) and not has_register(block, quad.var2) \
-                   and quad.var1 in quad.alive and quad.var2 not in quad.alive:
-                    block, quad, var1_loc = self.get_register(block, quad, quad.var1)
-                    var2_loc = get_anything(block, quad.var2)
-                else:
-                    var1_loc = get_anything(block, quad.var1)
-                    block, quad, var2_loc = self.get_register(block, quad, quad.var2)
+                # if not has_register(block, quad.var1) and not has_register(block, quad.var2) \
+                #    and quad.var1 in quad.alive and quad.var2 not in quad.alive:
+                #     block, quad, var1_loc = self.get_register(block, quad, quad.var1)
+                #     var2_loc = self.get_anything(block, quad.var2)
+                # else:
+                block, quad, var1_loc = self.get_register(block, quad, quad.var1)
+                var2_loc = self.get_anything(block, quad.var2)
 
-                op = "cmp" if is_register(var1_loc) or is_register(var2_loc) else "cmpq"
+                op = "cmp" if is_register(var1_loc) and is_register(var2_loc) else "cmpq"
 
                 quad.code.append('    {} {}, {}'.format(op, var2_loc, var1_loc))
                 quad.code.append('    {} {}'.format(quad.op, quad.name))
@@ -255,7 +257,7 @@ class RegOptimiser:
                     quad.code.append('    push {}'.format(arg_loc))
 
                 for arg, reg in zip(quad.args[:6], arg_registers):
-                    arg_loc = get_anything(block, arg)
+                    arg_loc = self.get_anything(block, arg)
 
                     op = 'mov' if arg_loc in free_registers else 'movq'
                     quad.code.append('    {} {}, {}'.format(op, arg_loc, reg))
@@ -288,8 +290,8 @@ class RegOptimiser:
             elif isinstance(quad, QBinOp):
                 # Only Concat
                 if quad.typ == 'string':
-                    var1_loc = get_anything(block, quad.var1)
-                    var2_loc = get_anything(block, quad.var2)
+                    var1_loc = self.get_anything(block, quad.var1)
+                    var2_loc = self.get_anything(block, quad.var2)
 
                     op1 = 'mov' if var1_loc in free_registers else 'movq'
                     op2 = 'mov' if var2_loc in free_registers else 'movq'
@@ -312,7 +314,7 @@ class RegOptimiser:
                 # Only idiv
                 elif quad.op in ['%', '/']:
                     block, quad, var1_loc = self.get_register(block, quad, quad.var1)
-                    var2_loc = get_anything(block, quad.var2)
+                    block, quad, var2_loc = self.get_register(block, quad, quad.var2)
 
                     if quad.op == '/':
                         res_loc = '%rax'
@@ -338,7 +340,7 @@ class RegOptimiser:
                     # res_loc = self.to_mem(quad.res)
                     block, quad, var1_loc = self.get_register(block, quad, quad.var1)
                     bloc, quad, res_loc = self.get_free_register(block, quad)
-                    var2_loc = get_anything(block, quad.var2)
+                    var2_loc = self.get_anything(block, quad.var2)
 
                     quad.code.append('    mov {}, {}'.format(var1_loc, res_loc))
 
@@ -368,7 +370,7 @@ class RegOptimiser:
             elif isinstance(quad, QUnOp):
                 # res_loc = self.get_register(block, quad, quad.res)
                 block, quad, res_loc = self.get_register(block, quad, quad.res)
-                var_loc = get_anything(block, quad.var)
+                var_loc = self.get_anything(block, quad.var)
 
                 op = 'mov' if var_loc in free_registers + arg_registers else 'movq'
                 quad.code.append('    {} {}, {}'.format(op, var_loc, res_loc))
@@ -410,7 +412,14 @@ class RegOptimiser:
 
     def get_register(self, block: SmallBlock, quad: Quad, var: str) -> (Block, Quad, str):
         if is_const(var):
-            return block, quad, '$' + var
+            if is_number(var):
+                block, quad, free_reg = self.get_free_register(block, quad)
+
+                quad.code.append('    movq ${}, {}'.format(var, free_reg))
+                return block, quad, free_reg
+            else:
+                self.add_string(var)
+                return block, quad, '$' + self.strings[var]
 
         if var in arg_registers or is_const(var):
             return block, quad, var

@@ -23,4 +23,12 @@ def get_from_item(item: LatteParser.ItemContext, default_value: str, typ: str):
 
 
 def is_const(var: str) -> bool:
-    return var.isnumeric() or var == '' or var[0] == '"'
+    return is_number(var) or is_string(var)
+
+
+def is_number(var: str) -> bool:
+    return (var is not None and var.isnumeric()) or (len(var) >= 2 and var[1:].isnumeric())
+
+
+def is_string(var: str) -> bool:
+    return var == '' or var[0] == '"'

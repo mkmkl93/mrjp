@@ -44,17 +44,18 @@ class Alive:
 
     def divide_into_blocks(self, quads: List[Quad], res) -> List[SmallBlock]:
         block = SmallBlock(str(self.block_counter))
-        block.add_quad(quads[0])
+        if not quads:
+            return block
         self.block_counter += 1
 
-        for i, quad in enumerate(quads[1:]):
-            if isinstance(quad, (QLabel, QFunBegin)):
+        for i, quad in enumerate(quads):
+            if isinstance(quad, (QLabel, QFunBegin)) and i > 0:
                 res.append(block)
-                return self.divide_into_blocks(quads[i + 1:], res)
-            elif isinstance(quad, QJump):
+                return self.divide_into_blocks(quads[i:], res)
+            elif isinstance(quad, (QCmp, QJump)):
                 block.add_quad(quad)
                 res.append(block)
-                return self.divide_into_blocks(quads[i + 2:], res)
+                return self.divide_into_blocks(quads[i + 1:], res)
             else:
                 block.add_quad(quad)
 
@@ -63,6 +64,7 @@ class Alive:
 
     def calculate_alive_all(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
         map_label = {}
+        map_block = {}
         n = len(blocks)
 
         for block in blocks:
@@ -71,19 +73,21 @@ class Alive:
 
         for i in range(n):
             block_label = blocks[i].quads[0].name
-            map_label[block_label] = i
+            map_label[block_label] = blocks[i].name
+            map_block[blocks[i].name] = i
 
         for i in range(n):
             prev_quad = blocks[i - 1].quads[-1]
             if i > 0 and not isinstance(prev_quad, QFunEnd) and not isinstance(prev_quad, QJump):
-                blocks[i].add_previous(blocks[i - 1].quads[0].name)
-                blocks[i - 1].add_following(blocks[i].quads[0].name)
+                blocks[i].add_previous(blocks[i - 1].name)
+                blocks[i - 1].add_following(blocks[i].name)
 
             act_quad = blocks[i].quads[-1]
             if isinstance(act_quad, (QCmp, QJump)):
-                blocks[i].add_following(act_quad.name)
-                jmp_indx = map_label[act_quad.name]
-                blocks[jmp_indx].add_previous(blocks[i].quads[0].name)
+                jmp_indx = map_block [map_label[act_quad.name]]
+
+                blocks[i].add_following(map_label[act_quad.name])
+                blocks[jmp_indx].add_previous(blocks[i].name)
 
         for i in range(n):
             que = [i]
@@ -97,10 +101,18 @@ class Alive:
 
                 if old_state != new_state or len(blocks[x].quads) == 1:
                     for prev_name in blocks[x].previous_blocks:
-                        prev_number = map_label[prev_name]
+                        prev_number = map_block[prev_name]
                         if prev_number != x:
                             blocks[prev_number].quads[-1].alive.union(new_state)
                             que.append(prev_number)
+
+        # placeholder = blocks
+        # blocks = []
+        # for block in placeholder:
+        #     if not block.previous_blocks and not isinstance(block.quads[0], QFunBegin) and not isinstance(block.quads[-1], QFunEnd):
+        #         pass
+        #     else:
+        #         blocks.append(block)
 
         return blocks
 

@@ -1,0 +1,9 @@
+int main() {
+    if (1 < 2) { printString("TAK"); } else { printString("NIE");}
+    if (1 > 2) { printString("TAK"); } else { printString("NIE");}
+    if (1 <= 2) { printString("TAK"); } else { printString("NIE");}
+    if (2 >= 2) { printString("TAK"); } else { printString("NIE");}
+    if (1 != 2) { printString("TAK"); } else { printString("NIE");}
+    if (2 == 2) { printString("TAK"); } else { printString("NIE");}
+    return 0;
+}
