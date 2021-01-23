@@ -26,7 +26,7 @@ class CSE:
             blocks = self.lcse(blocks)
             blocks = self.propagate_in_blocks(blocks)
             blocks = self.clear_blocks(blocks)
-            # blocks = self.gcse(blocks) # clear_blocks should be called before that
+            blocks = self.gcse(blocks)# clear_blocks should be called before that
 
         return blocks
 
@@ -39,7 +39,7 @@ class CSE:
                         pass
                     elif isinstance(quad, QEq):
                         if quad.var == replace_from:
-                            block.quads[i].res = replace_to
+                            block.quads[i].var = replace_to
                         if quad.res == replace_from:
                             return
                     elif isinstance(quad, QBinOp):
@@ -107,6 +107,10 @@ class CSE:
                         if quad.op == '-':
                             res_value = - int(quad.var)
                         elif quad.op == '!':
+                            res_value = 1 - int(quad.var)
+                        elif quad.op == '++':
+                            res_value = 1 + int(quad.var)
+                        elif quad.op == '--':
                             res_value = 1 - int(quad.var)
                         else:
                             self.debug("Shouldn't be here compress_block QUnOp")
@@ -254,6 +258,7 @@ class CSE:
                         pass
                     elif isinstance(quad, QEq):
                         if quad.var == replace_from:
+                            block.quads[i].var = replace_to
                             replace_in_block(i + 1, quad.res, replace_to)
                         if quad.res == replace_from:
                             return
@@ -278,6 +283,8 @@ class CSE:
                             block.quads[i].var = replace_to
                             self.repeat = True
                     elif isinstance(quad, QUnOp):
+                        if quad.var == replace_from:
+                            block.quads[i].var = replace_to
                         if quad.res == replace_from:
                             return
                     elif isinstance(quad, QCmp):
@@ -366,6 +373,12 @@ class CSE:
                     tmp = (quad.var1, quad.op, quad.var2)
                     if tmp in alive_exps:
                         block.quads[i] = QEq(quad.res, alive_exps[tmp])
+                        self.repeat = True
+                    elif (quad.var1,) in alive_exps:
+                        block.quads[i].var1 = alive_exps[(quad.var1,)]
+                        self.repeat = True
+                    elif (quad.var2,) in alive_exps:
+                        block.quads[i].var2 = alive_exps[(quad.var2,)]
                         self.repeat = True
                     alive_exps.discard(quad.res)
                 elif isinstance(quad, QFunCall):

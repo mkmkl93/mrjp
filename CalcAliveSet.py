@@ -75,6 +75,8 @@ class CalcAliveSet:
             block_label = blocks[i].quads[0].name
             map_label[block_label] = blocks[i].name
             map_block[blocks[i].name] = i
+            blocks[i].previous_blocks = []
+            blocks[i].following_blocks = []
 
         for i in range(n):
             prev_quad = blocks[i - 1].quads[-1]
@@ -88,6 +90,18 @@ class CalcAliveSet:
 
                 blocks[i].add_following(map_label[act_quad.name])
                 blocks[jmp_indx].add_previous(blocks[i].name)
+
+        repeat = False
+        placeholder = blocks
+        blocks = []
+        for block in placeholder:
+            if not block.previous_blocks and not isinstance(block.quads[0], QFunBegin) and not isinstance(block.quads[-1], QFunEnd):
+                repeat = True
+                pass
+            else:
+                blocks.append(block)
+        if repeat:
+            return self.calculate_alive_all(blocks)
 
         for i in range(n):
             que = [i]
@@ -105,14 +119,6 @@ class CalcAliveSet:
                         if prev_number != x:
                             blocks[prev_number].quads[-1].alive.union(new_state)
                             que.append(prev_number)
-
-        # placeholder = blocks
-        # blocks = []
-        # for block in placeholder:
-        #     if not block.previous_blocks and not isinstance(block.quads[0], QFunBegin) and not isinstance(block.quads[-1], QFunEnd):
-        #         pass
-        #     else:
-        #         blocks.append(block)
 
         return blocks
 

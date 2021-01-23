@@ -52,17 +52,19 @@ class AliveExpr:
             self.alive_expr = other.alive_expr.copy()
             self.was_intersected = True
         else:
-            self.alive_expr = {x:self.alive_expr[x] for x in other.alive_expr if x in self.alive_expr}
+            self.alive_expr = {x:self.alive_expr[x] for x in other.alive_expr if x in self.alive_expr and self.alive_expr[x] == other.alive_expr[x]}
 
     def add(self, key, value):
-        self.alive_expr[key] = value
+        if key not in arg_registers and value not in arg_registers:
+            self.alive_expr[key] = value
 
     def discard(self, delete):
         placeholder = self.alive_expr
         self.alive_expr = {}
         for key, value in placeholder.items():
             if len(list(key)) == 1:
-                if delete not in [key, value]:
+                var, = key
+                if delete not in [var, value]:
                     self.alive_expr[key] = value
             elif len(list(key)) == 2:
                 _, var = key
