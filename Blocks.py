@@ -17,6 +17,7 @@ def is_register(var) -> bool:
 def is_mem_loc(var) -> bool:
     return re.match(r'-?\d*\(%rbp\)', var)
 
+
 class Table:
     def __init__(self):
         self.table = {}

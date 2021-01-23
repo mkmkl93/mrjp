@@ -8,6 +8,11 @@ class CSE:
     def __init__(self, debug):
         self.dbug = debug
         self.repeat = True
+        self.tmp_counter = 0
+
+    def get_tmp_number(self) -> int:
+        self.tmp_counter += 1
+        return self.tmp_counter
 
     def debug(self, msg) -> None:
         if self.dbug:
@@ -212,14 +217,16 @@ class CSE:
 
     def lcse(self, blocks: List[SmallBlock]) -> List[SmallBlock]:
         def lcse_block(block: SmallBlock) -> SmallBlock:
-            def replace_in_block(start: int, replace_from: (str, str, str), replace_to: str) -> None:
-                for i in range(start, len(block.quads)):
-                    quad = block.quads[i]
-                    if isinstance(quad, (QJump, QFunBegin, QLabel, QReturn, QUnOp, QCmp)):
+            def replace_in_block(start: int, replace_from: (str, str, str), replace_to: str) -> bool:
+                changed = False
+                for i in range(start, len(placeholder)):
+                    quad = placeholder[i]
+                    if isinstance(quad, (QJump, QFunBegin, QFunEnd, QLabel, QReturn, QUnOp, QCmp)):
                         pass
                     elif isinstance(quad, QBinOp):
                         if (quad.var1, quad.op, quad.var2) == replace_from:
-                            block.quads[i] = QEq(quad.res, replace_to)
+                            placeholder[i] = QEq(quad.res, replace_to)
+                            changed = True
                         if quad.res in list(replace_from):
                             return
                     elif isinstance(quad, (QEq, QFunCall, QUnOp)):
@@ -228,6 +235,7 @@ class CSE:
                     else:
                         self.debug("Shouldn't be here lcse_block replace_in_block")
                         sys.exit(1)
+                return changed
 
             placeholder = block.quads
             block.quads = []
@@ -235,7 +243,13 @@ class CSE:
                 if isinstance(quad, (QEmpty, QJump, QFunBegin, QFunEnd, QLabel, QUnOp, QReturn, QFunCall, QEq, QCmp)):
                     pass
                 elif isinstance(quad, QBinOp):
-                    replace_in_block(i + 1, quad.res, quad.res)
+                    m = re.match(r'(.*)t\d*', quad.res)
+                    tmp_name = '{}tmp{}'.format(m.group(1), self.get_tmp_number())
+                    if replace_in_block(i + 1, (quad.var1, quad.op, quad.var2), tmp_name):
+                        old_res = quad.res
+                        quad.res = tmp_name
+                        block.quads.append(quad)
+                        quad = QEq(old_res, tmp_name)
                 else:
                     self.debug("Shouldn't be here lcse lcse_block")
                     sys.exit(1)
