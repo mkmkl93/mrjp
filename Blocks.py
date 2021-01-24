@@ -122,7 +122,6 @@ class BigBlock(Block):
     def __init__(self, block):
         super().__init__(block.name)
         self.blocks = [block]
-        self.var_counter = block.var_counter
         self.block_counter = block.block_counter
         self.if_counter = block.if_counter
         self.while_counter = block.while_counter
@@ -135,10 +134,6 @@ class BigBlock(Block):
         self.blocks.append(block)
         self.blocks.append(SmallBlock(self.give_block_name()))
         return self
-
-    def give_var_name(self):
-        self.var_counter += 1
-        return '{}_t{}'.format(self.name, self.var_counter)
 
     def give_block_name(self):
         self.block_counter += 1
@@ -183,13 +178,6 @@ class SmallBlock(Block):
         big_block.add_block(block)
         return big_block
 
-    def give_var_name(self):
-        if self.big_brother is not None:
-            return self.big_brother.give_var_name()
-        else:
-            self.var_counter += 1
-            return '{}_t{}'.format(self.name, self.var_counter)
-
     def give_block_name(self):
         if self.big_brother is not None:
             return self.big_brother.give_block_name()
@@ -206,14 +194,14 @@ class SmallBlock(Block):
 
     def give_while_number(self):
         if self.big_brother is not None:
-            return self.big_brother.give_var_name()
+            return self.big_brother.give_while_number()
         else:
             self.while_counter += 1
             return self.while_counter
 
     def give_if_number(self):
         if self.big_brother is not None:
-            return self.big_brother.give_var_name()
+            return self.big_brother.give_if_number()
         else:
             self.if_counter += 1
             return self.if_counter

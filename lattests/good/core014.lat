@@ -10,6 +10,11 @@ int main () {
     printInt(hi) ;
     hi = lo + hi ;
     lo = hi - lo ;
+    while (hi < mx) {
+      printInt(hi) ;
+      hi = lo + hi ;
+      lo = hi - lo ;
+    }
   }
   return 0 ;
 

@@ -301,9 +301,9 @@ class RegOptimiser:
 
                     quad.code.append('    call concat')
 
-                    if quad.var1 not in quad.alive:
+                    if quad.var1 not in quad.alive or quad.var1 == quad.res:
                         block = clear_var(block, quad.var1)
-                    if quad.var2 not in quad.alive:
+                    if quad.var2 not in quad.alive or quad.var2 == quad.res:
                         block = clear_var(block, quad.var2)
 
                     block, quad, free_reg = self.get_free_register(block, quad)
@@ -327,9 +327,9 @@ class RegOptimiser:
                     quad.code.append('    cqto')
                     quad.code.append('    {} {}'.format(op, var2_loc))
 
-                    if quad.var1 not in quad.alive:
+                    if quad.var1 not in quad.alive or quad.var1 == quad.res:
                         block = clear_var(block, quad.var1)
-                    if quad.var2 not in quad.alive:
+                    if quad.var2 not in quad.alive or quad.var2 == quad.res:
                         block = clear_var(block, quad.var2)
 
                     block, quad, free_reg = self.get_free_register(block, quad)
@@ -358,9 +358,9 @@ class RegOptimiser:
 
                     quad.code.append('    {} {}, {}'.format(op, var2_loc, res_loc))
 
-                    if quad.var1 not in quad.alive:
+                    if quad.var1 not in quad.alive or quad.var1 == quad.res:
                         block = clear_var(block, quad.var1)
-                    if quad.var2 not in quad.alive:
+                    if quad.var2 not in quad.alive or quad.var2 == quad.res:
                         block = clear_var(block, quad.var2)
 
                     block.table[res_loc].add(quad.res)
@@ -388,11 +388,12 @@ class RegOptimiser:
                 else:
                     quad.code.append('    {} {}'.format(op, res_loc))
 
+                if quad.var not in quad.alive or quad.res == quad.var:
+                    block = clear_var(block, quad.var)
+
                 block.table[res_loc].add(quad.res)
                 block.table[quad.res].add(res_loc)
 
-                if quad.var not in quad.alive:
-                    block = clear_var(block, quad.var)
 
                 block.quads.append(quad)
 
@@ -403,7 +404,7 @@ class RegOptimiser:
         # If last quad is jump
         if isinstance(block.quads[-1], (QJump, QCmp)):
             for code in quad_clear_block.code:
-                block.quads[-1].code.insert(len(block.quads[-1].code) - 1, code)
+                block.quads[-1].code.insert(len(block.quads[-1].code) - 2, code)
         else:
             block.quads.append(quad_clear_block)
 

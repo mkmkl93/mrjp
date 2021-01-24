@@ -9,10 +9,18 @@ class Code4:
     def __init__(self, DEBUG):
         self.envs = [{}]
         self.DEBUG = DEBUG
+        self.var_counter = 0
+        self.fun_name = ""
+
+    def give_var_name(self):
+        self.var_counter += 1
+        return '{}_t{}'.format(self.fun_name, self.var_counter)
 
     def debug(self, msg) -> None:
         if self.DEBUG:
             sys.stderr.write(msg)
+
+
 
     def error(self, ctx: antlr4.ParserRuleContext, msg) -> None:
         sys.stderr.write("ERROR\n")
@@ -64,6 +72,9 @@ class Code4:
         ctx_block = ctx.block()
         block = SmallBlock(name)
 
+        self.fun_name = name
+        self.var_counter = 1
+
         block.add_quad(QFunBegin(name))
 
         if args is not None:
@@ -73,7 +84,7 @@ class Code4:
 
                 if i < 6:
                     reg = arg_registers[i]
-                    arg_loc = block.give_var_name()
+                    arg_loc = self.give_var_name()
                     block.add_quad(QEq(arg_loc, reg))
                 else:
                     arg_loc = '{}(%rbp)'.format(16 + 8 * (i - 6))
@@ -82,7 +93,7 @@ class Code4:
 
         block = self.enter_block(ctx_block, block)
 
-        block.limit_locals(block.var_counter)
+        block.limit_locals(self.var_counter)
         block.add_quad(QFunEnd(name))
         self.envs.pop()
 
@@ -121,15 +132,22 @@ class Code4:
             var_item: LatteParser.ItemContext = ctx.item(i)
             var_name = var_item.ID().getText()
             item_expr = var_item.expr()
-            var_loc = block.give_var_name()
+            var_loc = self.give_var_name()
 
             if item_expr is None:
                 var_value = Var(var_type, default_value, loc=default_value)
+                block.add_quad(QEq(var_loc, var_value.loc))
             else:
                 var_value, counter = self.enter_expr(item_expr, block)
+                if not isinstance(item_expr, LatteParser.EIdContext):
+                    if isinstance(block, BigBlock):
+                        block.blocks[-1].quads[-1].res = var_loc
+                    else:
+                        block.quads[-1].res = var_loc
+                else:
+                    block.add_quad(QEq(var_loc, var_value.loc))
 
             self.envs[-1][var_name] = Var(var_type, var_value.value, loc=var_loc)
-            block.add_quad(QEq(var_loc, var_value.loc))
 
         return block
 
@@ -137,7 +155,7 @@ class Code4:
         if isinstance(ctx, LatteParser.EUnOpContext):
             exp = ctx.expr()
             var_exp, block = self.enter_expr(exp, block)
-            var_loc = block.give_var_name()
+            var_loc = self.give_var_name()
             op = ctx.children[0].getText()
 
             block.add_quad(QUnOp(var_loc, op, var_exp.loc))
@@ -155,7 +173,7 @@ class Code4:
                 if typ is None and exp.type in ["int", "string"]:
                     typ = exp.type
 
-            var_name = block.give_var_name()
+            var_name = self.give_var_name()
 
             if isinstance(ctx, LatteParser.EMulOpContext):
                 op = ctx.mulOp().getText()
@@ -170,24 +188,24 @@ class Code4:
                 if var_name in env:
                     return env[var_name], block
         elif isinstance(ctx, LatteParser.EIntContext):
-            var_name = block.give_var_name()
+            var_name = self.give_var_name()
             quad = QEq(var_name, ctx.INT().getText())
 
             block.add_quad(quad)
             return VInt(ctx.INT().getText(), loc=var_name), block
         elif isinstance(ctx, LatteParser.ETrueContext):
-            var_name = block.give_var_name()
+            var_name = self.give_var_name()
 
             block.add_quad(QEq(var_name, '1'))
             return VBool('true', var_name), block
         elif isinstance(ctx, LatteParser.EFalseContext):
-            var_name = block.give_var_name()
+            var_name = self.give_var_name()
 
             block.add_quad(QEq(var_name, '0'))
             return VBool('false', var_name), block
         elif isinstance(ctx, LatteParser.EFunCallContext):
             fun_name = ctx.ID().getText()
-            res_name = block.give_var_name()
+            res_name = self.give_var_name()
 
             var_list = []
             for x in ctx.expr():
@@ -207,7 +225,7 @@ class Code4:
 
             return Var(fun.res_type, loc=res_name), block
         elif isinstance(ctx, LatteParser.EStrContext):
-            var_name = block.give_var_name()
+            var_name = self.give_var_name()
             quad = QEq(var_name, ctx.STR().getText())
 
             block.add_quad(quad)
@@ -218,7 +236,7 @@ class Code4:
             label1 = block.give_label()
             label2 = block.give_label()
             label3 = block.give_label()
-            var_name = block.give_var_name()
+            var_name = self.give_var_name()
 
             block = self.enter_lazy_expr(ctx, block, label1, label2)
 
@@ -237,7 +255,7 @@ class Code4:
         condition = ctx.expr()
 
         while_number = block.give_while_number()
-        while_name = '{}_while{}'.format(block.name, while_number)
+        while_name = '{}_while_{}'.format(block.name, while_number)
         while_start = '{}_start'.format(while_name)
         while_end = '{}_end'.format(while_name)
 
@@ -322,7 +340,13 @@ class Code4:
 
         for env in self.envs[::-1]:
             if var_name in env:
-                block.add_quad(QEq(env[var_name].loc, val_exp.loc))
+                if not isinstance(exp, LatteParser.EIdContext):
+                    if isinstance(block, BigBlock):
+                        block.blocks[-1].quads[-1].res = env[var_name].loc
+                    else:
+                        block.quads[-1].res = env[var_name].loc
+                else:
+                    block.add_quad(QEq(env[var_name].loc, val_exp.loc))
                 break
 
         return block
@@ -340,7 +364,6 @@ class Code4:
 
         for env in self.envs[::-1]:
             if var_name in env:
-                name = block.give_var_name()
                 block.add_quad(QUnOp(env[var_name].loc, '--', env[var_name].loc))
                 return block
 

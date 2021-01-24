@@ -1,0 +1,10 @@
+int main() {
+    int i = 15;
+    while(i >= 0) {
+        int a = 13 * i;
+        printInt(a);
+        i = i - 3;
+    }
+
+    return 0;
+}

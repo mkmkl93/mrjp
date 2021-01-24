@@ -1,0 +1,10 @@
+int main() {
+    int j = 5;
+    while(j > 0) {
+        int e = j + 3;
+        printInt(e);
+        j--;
+    }
+
+    return 0;
+}

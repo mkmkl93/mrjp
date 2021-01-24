@@ -1,0 +1,37 @@
+int main() {
+    int i = 5, a = 0;
+    while(i >= 0) {
+        a = 13 * i;
+        printInt(a);
+        i = i - 3;
+        int j = 0;
+        while(j < 7) {
+            int k = -1;
+            while(k <= 2) {
+                int b = 5 * j;
+                printInt(b);
+                k = 2 + k;
+            }
+
+            int c = 7 * j;
+            printInt(c);
+            j = 3 + j;
+        }
+
+        int k = -1;
+        while(k <= 2) {
+            int d = 5 + k;
+            printInt(d);
+            k = 2 + k;
+        }
+    }
+
+    int j = -3;
+    while(j < 7) {
+        int e = -1 * j;
+        printInt(e);
+        j++;
+    }
+
+    return 0;
+}

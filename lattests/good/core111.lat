@@ -1,0 +1,16 @@
+int main() {
+    int i = 5;
+    while(i >= 0) {
+        int a = 13 * i;
+        printInt(a);
+        i = i - 3;
+        int j = 0;
+        while(j < 7) {
+            int a = j * 7;
+            printInt(a);
+            j = j + 3;
+        }
+    }
+
+    return 0;
+}

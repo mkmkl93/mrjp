@@ -1,9 +1,9 @@
 int main() {
-    int i = 0;
-    while(i < 5) {
+    int i = 15;
+    while(i >= 0) {
         int a = i;
         printInt(a);
-        i++;
+        i = i - 3;
     }
 
     return 0;
