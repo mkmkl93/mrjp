@@ -412,25 +412,25 @@ class CSE:
                     alive_exps.discard(quad.res)
                 elif isinstance(quad, QFunCall):
                     for j, arg in enumerate(quad.args):
-                        if arg in alive_exps:
-                            block.quads[i].args[j] = alive_exps[arg]
+                        if (arg,) in alive_exps:
+                            block.quads[i].args[j] = alive_exps[(arg,)]
                             self.repeat = True
                     alive_exps.discard(quad.res)
                 elif isinstance(quad, QReturn):
-                    if quad.var is not None and quad.var in alive_exps:
-                        block.quads[i].var = alive_exps[quad.var]
+                    if quad.var is not None and (quad.var,) in alive_exps:
+                        block.quads[i].var = alive_exps[(quad.var,)]
                         self.repeat = True
                 elif isinstance(quad, QUnOp):
-                    if quad.var in alive_exps:
-                        block.quads[i].var = alive_exps[quad.var]
+                    if (quad.var,) in alive_exps:
+                        block.quads[i].var = alive_exps[(quad.var,)]
                         self.repeat = True
                     alive_exps.discard(quad.res)
                 elif isinstance(quad, QCmp):
-                    if quad.var1 in alive_exps:
-                        block.quads[i].var1 = alive_exps[quad.var1]
+                    if (quad.var1,) in alive_exps:
+                        block.quads[i].var1 = alive_exps[(quad.var1,)]
                         self.repeat = True
-                    if quad.var2 in alive_exps:
-                        block.quads[i].var = alive_exps[quad.var2]
+                    if (quad.var2,) in alive_exps:
+                        block.quads[i].var2 = alive_exps[(quad.var2,)]
                         self.repeat = True
                 else:
                     self.debug("Shouldn't be here gcse_block")
