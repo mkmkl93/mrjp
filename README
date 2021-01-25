@@ -24,4 +24,155 @@ najpóźniej. Nie potrafiłem zoptymalizować kodu przy użyciu rejestrów opier
 zastąpiłem tłumaczenie każdej czwórki oddzielnie i niezależnie, na sposób uzależniony od reszty bloku.
 
 Zmiany do 2 terminu:
-Dodanie zwijanie stałych, usuwanie martwego kodu, LCSE.
+Pzede wszystkim to dodanie README, który cały czas był i mogę pokazać historię lokalnego gita ale po prostu
+zapomniałem go spakować do folderu. Rejestry były już ocenione wcześniej i ich opis znajduje się wcześniej.
+Optymalizacje odbywają się aż do punktu zbieżności, czyli jeżeli nawet jedna zmienna w zostanie zamieniona na inną
+to cały proces optymalizacji przebiega od nowa. Na samym początku każdego cyklu jest obliczanie zmiennych indukcyjnych
+i redukcja mocy. Teoretycznie można to zrobić bardziej agresywnie ale prościej jest posługując się definicjami z
+wykladu i tak tez zrobiłem, czyli bazowaz zmienna indukcja jak i jej pochodna moga byc tylko raz zadeklarowane w bloku.
+Przez to, że operuję na kodzie czwórkowym to jedynie zmienne postaci x = c * iv  lub x = iv + c moga zostac
+zoptymalizowane. Nie rozumiem w czym x = iv + c miala by byc gorsza od x = x + c ale jest zgodna z definicją i tez
+zostaja wysunieta przed petle. Najprostszym testem testującym to jest core109.lat ktory wyglada tak:
+```
+int main() {
+    int i = 0;
+    while(i < 15) {
+        int a = i * 7;
+        printInt(a);
+        i = i + 3;
+    }
+
+    return 0;
+}
+
+```
+a jego postać
+```
+Optymalizacje CSE
+Block 1:                                {}{('main_t2',): '0', ('main_while_1_t12',): '0'}
+main__begin 19                          set()
+main_t2 = 0                             {'main_t2'}
+main_while_1_t12 = 0                    {'main_while_1_t12', 'main_t2'}
+Block 2:                                {}{}
+main_while_1:                           {'main_while_1_t12', 'main_t2'}
+jge main_t2 15 -> main_while_1_end      {'main_while_1_t12', 'main_t2'}
+Block 3:                                {}{}
+main_while_1_start:                     {'main_while_1_t12', 'main_t2'}
+main_t8 = call printInt main_while_1_t12{'main_while_1_t12', 'main_t2'}
+main_while_1_t12 = main_while_1_t12 + 21 (int){'main_while_1_t12', 'main_t2'}
+main_t2 = main_t2 + 3 (int)             {'main_while_1_t12', 'main_t2'}
+jmp main_while_1                        {'main_while_1_t12', 'main_t2'}
+Block 4:                                {}{}
+main_while_1_end:                       set()
+return 0                                set()
+main__end                               set()
+```
+Zmienna `main_while_1_t12` to poczatkowa wartosc pochodnej zmiennej indukowanej i jak widac `* 7` zostalo
+zamienione na `+ 21`. To wszystko dziala tez kiedy jest wiele petli w sobie albo kiedy jest wiele petli obok siebie
+i najwiekszym testem do teog jest core113.lat. Nie wydaje mi sie, aby redukcja mocy byla kiedykowliek potrzeba wiecej
+niz raz ale dla pewnosci dziala za kazdym razem.
+
+Po tym wszystkim nastepuje ciag optymalizacji zaliczanych do LCSE, czyli kompresja obliczeń obliczalnych na początku
+wyrazeń jak `a = 3 * 7` -> `a = 21` oraz, co `3 > 7` -> `False`. Kompresja relacji ma najwieksze znaczenie przy ifach
+i skutkuje po pierwsze usunieciem porownania a po drugie usunieciem tez galezi, która nie zostanie odwiedzona
+(w przypadku if-else). Po tym wszystkim nastepuje wlasciwe lcse czyli zamiana identycznych prawych stron czwórek w bloku
+tak daleko jak sięga ich żywotność. Zamiana następuje w taki sposób, że jeżeli mamy ciąg czwórek 'a = b + c;'
+`a = b * c;` `d = b + c;` to zostanie to zamieniona na `tmp = b + c;` 'a = tmp' `a = b * c;` `d = tmp;`.
+Po tym wszystkim nastepuje redukcja martwego kodu, czyli jeżeli czwórka nie jest funkcja, bo funkcja może mieć skutek
+uboczny, i jej wynik nie należy do zbioru zmiennych żywych to zostanie ta czwórka usunieta. Najlepiej to wszystko
+zobaczyć na teście core012.lat który wygląda tak:
+
+```
+/* Test arithmetic and comparisons. */
+
+int main() {
+    int x = 56;
+    int y = -23;
+    printInt(x+y);
+    printInt(x-y);
+    printInt(x*y);
+    printInt(45/2);
+    printInt(78%3);
+    printBool(x-y > x+y);
+    printBool(x/y <= x*y);
+    printString("string"+" "+"concatenation");
+    return 0 ;
+}
+
+void printBool(boolean b) {
+  if (b) {
+    printString("true");
+    return;
+  } else {
+    printString("false");
+    return;
+ }
+}
+```
+
+i zostaje zamieniony do czwórek
+```
+Optymalizacje CSE
+Block 1:                                {}{}
+main__begin 44                          set()
+main_t7 = call printInt 33              set()
+main_t9 = call printInt 79              set()
+main_t11 = call printInt -1288          set()
+main_t13 = call printInt 22             set()
+main_t17 = call printInt 0              set()
+QEmpty                                  set()
+Block 2:                                {}{}
+main_l1:                                set()
+jmp main_l3                             set()
+Block 3:                                {}{}
+main_l3:                                set()
+main_t21 = call printBool 1             set()
+jmp main_l5                             set()
+Block 4:                                {}{}
+main_l5:                                set()
+Block 5:                                {}{}
+main_l6:                                set()
+main_t25 = call printBool 0             set()
+main_t29 = call printString "string concatenation"set()
+return 0                                set()
+main__end                               set()
+Block 6:                                {}{}
+printBool__begin 6                      {'%rdi'}
+printBool_t2 = %rdi                     {'printBool_t2'}
+jne printBool_t2 1 -> printBool_if1_elseset()
+Block 7:                                {}{}
+jmp printBool_if1_start                 set()
+Block 8:                                {}{}
+printBool_if1_start:                    set()
+printBool_t3 = call printString "true"  set()
+return                                  set()
+jmp printBool_if1_end                   set()
+Block 9:                                {}{}
+printBool_if1_else:                     set()
+printBool_t5 = call printString "false" set()
+return                                  set()
+Block 10:                               {}{}
+printBool_if1_end:                      set()
+printBool__end                          set()
+```
+
+Tutaj jest ta niedkosnałośc jak `jmp label; label:` ale nalezy to do peephole, nie spowalnia programu tylko
+jest trudniejsze do przeczytania.
+
+Po tym wszystkim nastepuje gcse. DLa każdego bloku wyznaczany jest zbiór operacji docierającyh w sposób
+podobny do zbiorów żywych tylko troszkę inaczej, jest operacja przecięcia zbiorów a nie sumy. Po tym
+dla każdego bloku prostego idac od poczatku do końca aktualizujemy na biezaco ten zbior i jezeli trafimy na czworke
+`a = b + c;` i w pamieci mamy pare `b + c -> d` to zostanie pierwsza czwórka zamieniona na 'a = d'.
+Działa to również dla przypisań i operacji unarnych.
+Jeżeli przecinamy zbiory to sprawdzamy czy tak jakby klucz i wartość jest taka sama. Jeżeli byśmy przecinali
+`b + c -> d` z `b + c -> e` to otrzymalibysmy zbiór pusty bo nie wiadomo gdzie później jest wynik tego obliczenia.
+Najlepiej to też widać na wcześnij teście bo zauważmy, że `printBool(x/y <= x*y);` znajduje sie w innym bloku niz
+deklracja x i y a została zoptymalizowana, czyli ich wartości do nich doszły.
+
+Mój program działa również dla tablic względem specyfikacji ale niestety nie działa to równolegle z optymalizacjami.
+Jeżeli chciałby Pan to ocenić to musi Pan zakomentować linie 28-35 w pliku CSE.py. Tablice działają tak, że
+w pierwszym indeksie tablicy trzymana jest jej długośc a cała reszta jest przesunięta o jeden w prawo.
+W przypadku gdyby tablice nie podlegały ocenie jezeli nie dzialaja z optymalizacjami to proszę ich nie oceniać i
+skupić się na optymalizacjach.
+
+Jeżeli chodzi o kod czwórkowy to najłatwiejszy sposób na ich sprawdzenie to uruchomienie procesu z debugiem.
