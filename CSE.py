@@ -171,12 +171,12 @@ class CSE:
                 if isinstance(quad, (QEmpty, QJump, QFunBegin, QFunCall, QCmp, QReturn, QFunEnd, QLabel)):
                     block.quads.append(quad)
                 elif isinstance(quad, QEq):
-                    if quad.res in quad.alive:
+                    if quad.res in quad.alive or quad.res.startswith('(') or quad.var.startswith('('):
                         block.quads.append(quad)
                     else:
                         self.repeat = True
                 elif isinstance(quad, (QBinOp, QUnOp)):
-                    if quad.res in quad.alive:
+                    if quad.res in quad.alive or quad.res.startswith('('):
                         block.quads.append(quad)
                     else:
                         self.repeat = True
@@ -227,7 +227,7 @@ class CSE:
                     if isinstance(quad, (QEmpty, QJump, QFunBegin, QFunEnd, QLabel, QReturn, QUnOp, QCmp)):
                         pass
                     elif isinstance(quad, QBinOp):
-                        if (quad.var1, quad.op, quad.var2) == replace_from:
+                        if (quad.var1, quad.op, quad.var2) == replace_from and not quad.var1.startswith('(') and not quad.var2.startswith('('):
                             placeholder[i] = QEq(quad.res, replace_to)
                             changed = True
                         if quad.res in list(replace_from):
@@ -326,7 +326,7 @@ class CSE:
                 if isinstance(quad, (QEmpty, QJump, QFunBegin, QFunEnd, QLabel, QUnOp, QReturn, QFunCall, QBinOp, QCmp)):
                     pass
                 elif isinstance(quad, QEq):
-                    if not is_register(quad.var):
+                    if not is_register(quad.var) and '(' not in quad.var and '(' not in quad.res:
                         replace_in_block(i + 1, quad.res, quad.var)
                 else:
                     self.debug("Shouldn't be here clear_block")
@@ -501,13 +501,13 @@ class CSE:
                         if isinstance(quad, (QEmpty, QLabel, QJump, QCmp, QReturn, QFunBegin, QFunEnd, QFunCall, QEq)):
                             pass
                         elif isinstance(quad, QBinOp):
-                            if quad.res in [quad.var1, quad.var2]:
+                            if quad.res in [quad.var1, quad.var2] and not quad.var1.startswith('(') and not quad.var2.startswith('('):
                                 var1, var2 = quad.var1, quad.var2
                                 if quad.res == var2:
                                     var1, var2 = var2, var1 #tylko var2 moze byc const lub niezmiennikiem
                                 if (is_const(var2) or var2 not in variants) and quad.op in ['+', '-']:
                                     basic_induction_vars.add((quad.res, quad.op, var2))
-                        elif isinstance(quad, QUnOp):
+                        elif isinstance(quad, QUnOp) and not quad.var.startswith('('):
                             if quad.res == quad.var and quad.op in ['++', '--']:
                                 if quad.op == '++':
                                     basic_induction_vars.add((quad.res, '+', '1'))
@@ -536,12 +536,12 @@ class CSE:
                         if isinstance(quad, (QEmpty, QLabel, QJump, QCmp, QReturn, QFunBegin, QFunEnd, QFunCall, QUnOp)):
                             pass
                         elif isinstance(quad, QEq):
-                            if quad.res not in single_defs or quad.var not in basics or is_const(quad.var):
+                            if quad.res not in single_defs or quad.var not in basics or is_const(quad.var) or quad.res.startswith('(') or quad.var.startswith('('):
                                 pass
                             else:
                                 res.add((quad.res, quad.var, '+', '0'))
                         elif isinstance(quad, QBinOp):
-                            if quad.res not in single_defs or quad.res in basics or quad.op not in ['+', '-', '*']:
+                            if quad.res not in single_defs or quad.res in basics or quad.op not in ['+', '-', '*'] or quad.var1.startswith('(') or quad.var2.startswith('('):
                                 pass
                             elif quad.var1 in basics and quad.var2 not in variants:
                                 res.add((quad.res, quad.var1, quad.op, quad.var2))
@@ -572,7 +572,9 @@ class CSE:
                         if isinstance(quad, (QEmpty, QLabel, QJump, QCmp, QReturn, QFunBegin, QFunEnd)):
                             pass
                         elif isinstance(quad, QBinOp):
-                            if (quad.res, quad.var1, quad.op, quad.var2) in basic_derived_vars or (quad.res, quad.var2, quad.op, quad.var1) in basic_derived_vars:
+                            if quad.var1.startswith('(') or quad.var2.startswith('('):
+                                pass
+                            elif (quad.res, quad.var1, quad.op, quad.var2) in basic_derived_vars or (quad.res, quad.var2, quad.op, quad.var1) in basic_derived_vars:
                                 erase_last = True
                             elif quad.var1 in change_to:
                                 quad.var1 = change_to[quad.var1]
@@ -583,12 +585,16 @@ class CSE:
                                 if arg in change_to:
                                     quad.args[j] = change_to[arg]
                         elif isinstance(quad, QEq):
-                            if (quad.res, quad.var, '+', '0') in basic_derived_vars:
+                            if quad.var.startswith('(') or quad.res.startswith('('):
+                                pass
+                            elif (quad.res, quad.var, '+', '0') in basic_derived_vars:
                                 erase_last = True
                             elif quad.var in change_to:
                                 quad.var = change_to[quad.var]
                         elif isinstance(quad, QUnOp):
-                            if quad.var in change_to:
+                            if quad.var.startswith('(') or quad.res.startswith('('):
+                                pass
+                            elif quad.var in change_to:
                                 quad.var = change_to[quad.var]
                         else:
                             self.debug("Shouldn't be here loop_optimisation replace_basic_derived_vars_block")

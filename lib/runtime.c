@@ -47,3 +47,13 @@ char* concat(char* s1, char* s2) {
     strcat(t, s2);
     return t;
 }
+
+void *reserve(int size) {
+    void *ptr = malloc(8 * size + 8);
+    if (ptr == NULL) {
+        error();
+        exit(1);
+    }
+
+    return ptr;
+}

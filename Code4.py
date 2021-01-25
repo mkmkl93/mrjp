@@ -138,8 +138,8 @@ class Code4:
                 var_value = Var(var_type, default_value, loc=default_value)
                 block.add_quad(QEq(var_loc, var_value.loc))
             else:
-                var_value, counter = self.enter_expr(item_expr, block)
-                if not isinstance(item_expr, LatteParser.EIdContext):
+                var_value, block = self.enter_expr(item_expr, block)
+                if not isinstance(item_expr, (LatteParser.EIdContext, LatteParser.ENewContext)):
                     if isinstance(block, BigBlock):
                         block.blocks[-1].quads[-1].res = var_loc
                     else:
@@ -209,7 +209,7 @@ class Code4:
 
             var_list = []
             for x in ctx.expr():
-                var, counter = self.enter_expr(x, block)
+                var, block = self.enter_expr(x, block)
                 var_list.append(var)
 
             fun_type = [x.type for x in var_list]
@@ -248,6 +248,39 @@ class Code4:
             block.add_quad(QLabel(label3))
 
             return VBool(None, var_name), block
+        elif isinstance(ctx, LatteParser.ENewContext):
+            arr_loc = self.give_var_name()
+            typ = ctx.type_().getText()
+            size, block = self.enter_expr(ctx.expr(), block)
+            block.add_quad(QFunCall('reserve', arr_loc, [size.loc]))
+            block.add_quad(QEq('(' + arr_loc + ')', size.loc))
+
+            return VArray(typ, loc=arr_loc), block
+        elif isinstance(ctx, LatteParser.ELengthContext):
+            ID = ctx.ID().getText()
+            var_name = self.give_var_name()
+
+            for env in self.envs[::-1]:
+                if ID in env:
+                    block.add_quad(QEq(var_name, '(' + env[ID].loc + ')'))
+                    break
+
+            return VInt(None, var_name), block
+        elif isinstance(ctx, LatteParser.EArrElContext):
+            ID = ctx.ID().getText()
+            var_name = self.give_var_name()
+            var, block = self.enter_expr(ctx.expr(), block)
+
+            for env in self.envs[::-1]:
+                if ID in env:
+                    block.add_quad(QEq(var_name, var.loc))
+                    block.add_quad(QBinOp(var_name, var_name, '*', '8'))
+                    block.add_quad(QBinOp(var_name, var_name, '+', '8'))
+                    block.add_quad(QBinOp(var_name, var_name, '+', env[ID].loc))
+                    block.add_quad(QEq(var_name, '(' + var_name + ')'))
+                    break
+
+            return VInt(None, var_name), block
         else:
             self.error(ctx, "Unresolved instance in enter_expr")
 
@@ -336,11 +369,25 @@ class Code4:
         var_name = ctx.ID().getText()
         exp = ctx.expr()
 
+        res_exp = None
+        if len(exp) == 2:
+            res_exp = exp[0]
+            exp = exp[1]
+            res_exp, block = self.enter_expr(res_exp, block)
+        else:
+            exp = exp[0]
         val_exp, block = self.enter_expr(exp, block)
 
         for env in self.envs[::-1]:
             if var_name in env:
-                if not isinstance(exp, LatteParser.EIdContext):
+                if res_exp is not None:
+                    var_name2 = self.give_var_name()
+                    block.add_quad(QEq(var_name2, res_exp.loc))
+                    block.add_quad(QBinOp(var_name2, var_name2, '*', '8'))
+                    block.add_quad(QBinOp(var_name2, var_name2, '+', '8'))
+                    block.add_quad(QBinOp(var_name2, var_name2, '+', env[var_name].loc))
+                    block.add_quad(QEq('(' + var_name2 + ')', val_exp.loc))
+                elif not isinstance(exp, LatteParser.EIdContext):
                     if isinstance(block, BigBlock):
                         block.blocks[-1].quads[-1].res = env[var_name].loc
                     else:
@@ -408,6 +455,47 @@ class Code4:
         block.add_quad(QLabel(if_end))
         return block
 
+    def enter_for(self, ctx: LatteParser.ForContext, block: Block) -> Block:
+        self.envs.append({})
+        stmt = ctx.stmt()
+        i = self.give_var_name()
+        n = self.give_var_name()
+        x = ctx.ID(0).getText()
+        x_loc = self.give_var_name()
+        arr = ctx.ID(1).getText()
+        while_number = block.give_while_number()
+        while_name = '{}_while_{}'.format(block.name, while_number)
+        while_start = '{}_start'.format(while_name)
+        while_end = '{}_end'.format(while_name)
+
+        self.envs[-1][x] = Var(type=ctx.type_().getText(), loc=x_loc)
+        arr_loc = None
+        for env in self.envs[::-1]:
+            if arr in env:
+                arr_loc = env[arr].loc
+                break
+
+        block.add_quad(QEq(i, '-1'))
+        block.add_quad(QEq(n, '(' + arr_loc + ')'))
+        block.add_quad(QLabel(while_name))
+        block.add_quad(QUnOp(i, '++', i))
+        block.add_quad(QEq(x_loc, i))
+        block.add_quad(QBinOp(x_loc, x_loc, '*', '8'))
+        block.add_quad(QBinOp(x_loc, x_loc, '+', '8'))
+        block.add_quad(QBinOp(x_loc, x_loc, '+', arr_loc))
+        block.add_quad(QEq(x_loc, '(' + x_loc + ')'))
+        block.add_quad(QCmp('jge', i, n, while_end))
+        block.add_quad(QLabel(while_start))
+
+        block = self.enter_stmt(stmt, block)
+
+        self.envs.pop()
+
+        block.add_quad(QJump(while_name))
+        block.add_quad(QLabel(while_end))
+
+        return block
+
     def enter_stmt(self, ctx: LatteParser.StmtContext, block) -> Block:
         self.debug(ctx.getText() + "\n")
         if isinstance(ctx, LatteParser.BlockStmtContext):
@@ -440,6 +528,8 @@ class Code4:
         elif isinstance(ctx, LatteParser.SExpContext):
             _, block = self.enter_expr(ctx.expr(), block)
             return block
+        elif isinstance(ctx, LatteParser.ForContext):
+            return self.enter_for(ctx, block)
         elif isinstance(ctx, LatteParser.EmptyContext):
             return block
         else:

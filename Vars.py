@@ -31,3 +31,12 @@ class VFunction(Var):
 
     def __eq__(self, other):
         return other.res_type == self.res_type and other.type == self.type
+
+
+class VArray(Var):
+    def __init__(self, type, loc):
+        super().__init__(loc=loc)
+        self.type = type + '[]'
+
+    def __eq__(self, other):
+        return other.type == self.type

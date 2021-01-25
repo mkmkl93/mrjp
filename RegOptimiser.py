@@ -105,7 +105,7 @@ class RegOptimiser:
             self.line += 1
             quad.line = self.line
 
-            if isinstance(quad, (QJump, QFunBegin, QFunCall)):
+            if isinstance(quad, (QEmpty, QLabel, QJump, QFunBegin, QFunEnd, QFunCall)):
                 pass
             elif isinstance(quad, QCmp):
                 self.add_appearance(quad.var1)
@@ -123,6 +123,9 @@ class RegOptimiser:
                 self.add_appearance(quad.var2)
             elif isinstance(quad, QUnOp):
                 self.add_appearance(quad.var)
+            else:
+                self.debug("Shouldn't be here add_appearances")
+                sys.exit(1)
         return block
 
     def add_appearance(self, var):
@@ -206,8 +209,35 @@ class RegOptimiser:
                 block.quads.append(quad)
                 block.quads.append(quad_empty)
             elif isinstance(quad, QEq):
+                if quad.res.startswith('('):
+                    block, quad, res_reg = self.get_register(block, quad, quad.res[1:-1])
+                    block, quad, var_reg = self.get_register(block, quad, quad.var)
+
+                    quad.code.append('    movq {}, ({})'.format(var_reg, res_reg))
+
+                    if quad.res[1:-1] in quad.alive:
+                        block = clear_var(block, quad.res[1:-1])
+                        block.table[res_reg].add(quad.res[1:-1])
+                        block.table[quad.res[1:-1]].add(res_reg)
+                    if quad.var not in quad.alive:
+                        block.table[quad.var] = set()
+                        block.table[res_reg].discard(quad.var)
+
+                elif quad.var.startswith('('):
+                    block, quad, res_reg = self.get_register(block, quad, quad.res)
+                    block, quad, var_reg = self.get_register(block, quad, quad.var[1:-1])
+
+                    quad.code.append('    movq ({}), {}'.format(var_reg, res_reg))
+
+                    if quad.var[1:-1] not in quad.alive:
+                        block.table[quad.var[1:-1]] = set()
+                        block.table[res_reg].discard(quad.var[1:-1])
+                    if quad.res in quad.alive:
+                        block = clear_var(block, quad.res)
+                        block.table[res_reg].add(quad.res)
+                        block.table[quad.res].add(res_reg)
                 # Second argument is a number
-                if quad.var.isnumeric() or quad.var.startswith("-") and quad.var[1:].isnumeric():
+                elif quad.var.isnumeric() or quad.var.startswith("-") and quad.var[1:].isnumeric():
                     block, quad, var_reg = self.get_free_register(block, quad)
                     quad.code.append('    movq ${}, {}'.format(int(quad.var), var_reg))
                 # Second argument is a string
@@ -219,14 +249,14 @@ class RegOptimiser:
                 elif quad.var in arg_registers:
                     block, quad, var_reg = self.get_free_register(block, quad)
 
-                    quad.code.append('    mov {}, {}'.format(quad.var, var_reg))
+                    quad.code.append('    movq {}, {}'.format(quad.var, var_reg))
                 else:
                     block, quad, var_reg = self.get_register(block, quad, quad.var)
                     if quad.var not in quad.alive:
                         block.table[quad.var] = set()
                         block.table[var_reg].discard(quad.var)
 
-                if quad.res in quad.alive:
+                if quad.res in quad.alive and not quad.res.startswith('(') and not quad.var.startswith('('):
                     block = clear_var(block, quad.res)
                     block.table[var_reg].add(quad.res)
                     block.table[quad.res].add(var_reg)
@@ -259,7 +289,7 @@ class RegOptimiser:
                 for arg, reg in zip(quad.args[:6], arg_registers):
                     arg_loc = self.get_anything(block, arg)
 
-                    op = 'mov' if arg_loc in free_registers else 'movq'
+                    op = 'movq' if arg_loc in free_registers else 'movq'
                     quad.code.append('    {} {}, {}'.format(op, arg_loc, reg))
 
                 quad.code.append('    call {}'.format(quad.name))
@@ -293,8 +323,8 @@ class RegOptimiser:
                     var1_loc = self.get_anything(block, quad.var1)
                     var2_loc = self.get_anything(block, quad.var2)
 
-                    op1 = 'mov' if var1_loc in free_registers else 'movq'
-                    op2 = 'mov' if var2_loc in free_registers else 'movq'
+                    op1 = 'movq' if var1_loc in free_registers else 'movq'
+                    op2 = 'movq' if var2_loc in free_registers else 'movq'
 
                     quad.code.append('    {} {}, %rdi'.format(op1, var1_loc))
                     quad.code.append('    {} {}, %rsi'.format(op2, var2_loc))
@@ -307,7 +337,7 @@ class RegOptimiser:
                         block = clear_var(block, quad.var2)
 
                     block, quad, free_reg = self.get_free_register(block, quad)
-                    quad.code.append('    mov %rax, {}'.format(free_reg))
+                    quad.code.append('    movq %rax, {}'.format(free_reg))
 
                     block.table[free_reg].add(quad.res)
                     block.table[quad.res].add(free_reg)
@@ -333,7 +363,7 @@ class RegOptimiser:
                         block = clear_var(block, quad.var2)
 
                     block, quad, free_reg = self.get_free_register(block, quad)
-                    quad.code.append('    mov {}, {}'.format(res_loc, free_reg))
+                    quad.code.append('    movq {}, {}'.format(res_loc, free_reg))
                     block.table[free_reg].add(quad.res)
                     block.table[quad.res].add(free_reg)
                 else:
@@ -342,7 +372,7 @@ class RegOptimiser:
                     bloc, quad, res_loc = self.get_free_register(block, quad)
                     var2_loc = self.get_anything(block, quad.var2)
 
-                    quad.code.append('    mov {}, {}'.format(var1_loc, res_loc))
+                    quad.code.append('    movq {}, {}'.format(var1_loc, res_loc))
 
                     if quad.op == '*':
                         op = 'imul'
@@ -363,6 +393,7 @@ class RegOptimiser:
                     if quad.var2 not in quad.alive or quad.var2 == quad.res:
                         block = clear_var(block, quad.var2)
 
+                    block = clear_var(block, quad.res)
                     block.table[res_loc].add(quad.res)
                     block.table[quad.res].add(res_loc)
 
@@ -371,7 +402,7 @@ class RegOptimiser:
                 block, quad, res_loc = self.get_register(block, quad, quad.res)
                 var_loc = self.get_anything(block, quad.var)
 
-                op = 'mov' if var_loc in free_registers + arg_registers else 'movq'
+                op = 'movq' if var_loc in free_registers + arg_registers else 'movq'
                 quad.code.append('    {} {}, {}'.format(op, var_loc, res_loc))
 
                 if quad.op == '-':
@@ -396,6 +427,9 @@ class RegOptimiser:
 
 
                 block.quads.append(quad)
+            else:
+                self.debug("Shouldn't be here calculate_code")
+                sys.exit(1)
 
         quad_clear_block = QEmpty()
         quad_clear_block.alive = block.quads[-1].alive.copy()
@@ -411,6 +445,11 @@ class RegOptimiser:
         return block
 
     def get_register(self, block: SmallBlock, quad: Quad, var: str) -> (Block, Quad, str):
+        if var.startswith('('):
+            is_pointer = True
+            var = var[1:-1]
+        else:
+            is_pointer = False
         if is_const(var):
             if is_number(var):
                 block, quad, free_reg = self.get_free_register(block, quad)
@@ -421,11 +460,13 @@ class RegOptimiser:
                 self.add_string(var)
                 return block, quad, '$' + self.strings[var]
 
-        if var in arg_registers or is_const(var):
+        if var in arg_registers:
             return block, quad, var
 
         for place in block.table[var]:
             if place in free_registers + arg_registers:
+                if is_pointer:
+                    place = '(' + place + ')'
                 return block, quad, place
 
         block, quad, free_reg = self.get_free_register(block, quad)
@@ -434,6 +475,9 @@ class RegOptimiser:
 
         block.table[free_reg].add(var)
         block.table[var].add(free_reg)
+
+        if is_pointer:
+            free_reg = '(' + free_reg + ')'
 
         return block, quad, free_reg
 
@@ -498,7 +542,7 @@ def get_epilog() -> QEmpty:
 
     for reg in reversed(callee_saved):
         quad.code.append('    pop {}'.format(reg))
-    quad.code.append('    mov %rbp, %rsp')
+    quad.code.append('    movq %rbp, %rsp')
     quad.code.append('    pop %rbp')
 
     return quad

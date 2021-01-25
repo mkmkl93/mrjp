@@ -26,7 +26,8 @@ class MyErrorListener(ErrorListener):
     def syntaxError(self, recognizer, offending_symbol, line, column, msg, e):
         sys.stderr.write("ERROR\n")
         sys.stderr.write("\033[91m" + "Syntax error at " + str(line) + ":" + str(column) + "\033[0m\n")
-        sys.stderr.write(offending_symbol.text + '\n')
+        if offending_symbol:
+            sys.stderr.write(offending_symbol.text + '\n')
         sys.stderr.write(msg + '\n')
         sys.exit(1)
 

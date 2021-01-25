@@ -12,6 +12,8 @@ class FrontEnd:
 
     def error(self, ctx: antlr4.ParserRuleContext, msg) -> None:
         sys.stderr.write("ERROR\n")
+        if not hasattr(ctx, 'start'):
+            sys.exit(1)
         sys.stderr.write("\033[91m" + "Compilation error at " + str(ctx.start.line) + ":" + str(ctx.start.column) + "\033[0m\n")
         sys.stderr.write(msg + '\n')
         with open(self.file) as fp:
@@ -297,8 +299,67 @@ class FrontEnd:
             return Var('string', ctx.STR().getText())
         elif isinstance(ctx, LatteParser.EParenContext):
             return self.enter_expr(ctx.expr())
+        elif isinstance(ctx, LatteParser.ENewContext):
+            typ = ctx.type_().getText()
+
+            if typ not in ['int', 'string', 'boolean']:
+                self.error(ctx, "Array type not in 'int, string, boolean'")
+
+            exp = ctx.expr()
+            exp_var = self.enter_expr(exp)
+            if exp_var.type != 'int':
+                self.error(ctx, "Array size is not int")
+
+            return VArray(typ, None)
+        elif isinstance(ctx, LatteParser.ELengthContext):
+            ID = ctx.ID().getText()
+            exists = False
+
+            for env in self.envs[::-1]:
+                if ID in env:
+                    if env[ID].type.endswith('[]'):
+                        exists = True
+                        break
+
+            if exists:
+                return VInt(None, None)
+            else:
+                self.error(ctx, "Only Arrays have length method")
+        elif isinstance(ctx, LatteParser.EArrElContext):
+            ID = ctx.ID().getText()
+            exists = False
+            typ = None
+
+            exp = ctx.expr()
+            exp_var = self.enter_expr(exp)
+            if exp_var.type != 'int':
+                self.error(ctx, "Array size is not int")
+
+            for env in self.envs[::-1]:
+                if ID in env:
+                    if env[ID].type.endswith('[]'):
+                        typ = env[ID].type[:-2]
+                        exists = True
+                        break
+
+            if exists:
+                return Var(typ)
+            else:
+                self.error(ctx, "Only Arrays can be dereferenced")
         else:
             self.error(ctx, "Unresolved instance in enter_expr")
+            exists = False
+
+            for env in self.envs[::-1]:
+                if ID in env:
+                    if env[ID].type.endswith('[]'):
+                        exists = True
+                        break
+
+            if exists:
+                return VInt(None, None)
+            else:
+                self.error(ctx, "Only Arrays have length method")
 
     def enter_while(self, ctx: LatteParser.WhileContext, ret_type) -> None:
         condition = ctx.expr()
@@ -317,15 +378,33 @@ class FrontEnd:
     def enter_ass(self, ctx: LatteParser.AssContext) -> None:
         var_name = ctx.ID().getText()
         exp = ctx.expr()
+        res_exp = None
+
+        if len(exp) == 2:
+            res_exp = exp[0]
+            exp = exp[1]
+            res_exp = self.enter_expr(res_exp)
+
+            if res_exp.type != 'int':
+                self.error(ctx, "Array index must be an integer")
+        else:
+            exp = exp[0]
 
         val_exp = self.enter_expr(exp)
 
         for env in self.envs[::-1]:
             if var_name in env:
-                if env[var_name].type != val_exp.type:
-                    self.error(ctx, "Incorrect type of assignment\nExpected " + env[var_name].type + " got " + val_exp.type)
+                if res_exp:
+                    if env[var_name].type[:-2] != val_exp.type:
+                        self.error(ctx, "Incorrect type of assignment\nExpected " + env[
+                            var_name].type[:-2] + " got " + val_exp.type)
+                    else:
+                        return
                 else:
-                    return
+                    if env[var_name].type != val_exp.type:
+                        self.error(ctx, "Incorrect type of assignment\nExpected " + env[var_name].type + " got " + val_exp.type)
+                    else:
+                        return
 
         self.error(ctx, "Variable not declared: " + var_name)
 
@@ -384,6 +463,27 @@ class FrontEnd:
             self.enter_stmt(ctx.stmt(i), ret_type)
             self.envs.pop()
 
+    def enter_for(self, ctx: LatteParser.ForContext, ret_type: str) -> None:
+        self.envs.append({})
+        i_typ = ctx.type_().getText()
+        i = ctx.ID(0).getText()
+        arr = ctx.ID(1).getText()
+        exists = False
+
+        for env in self.envs[::-1]:
+            if arr in env:
+                if env[arr].type[:-2] != i_typ:
+                    self.error(ctx, "Incorrect type of assignment\nExpected " + env[arr].type[:-2] + " got " + i_typ)
+                else:
+                    exists = True
+
+        if not exists:
+            self.error(ctx, "Variable not declared: " + arr)
+
+        self.envs[-1][i] = Var(i_typ)
+        self.enter_stmt(ctx.stmt(), ret_type)
+        self.envs.append({})
+
     def enter_stmt(self, ctx: LatteParser.StmtContext, ret_type):
         if isinstance(ctx, LatteParser.BlockStmtContext):
             self.envs.append({})
@@ -409,8 +509,10 @@ class FrontEnd:
             self.enter_while(ctx, ret_type)
         elif isinstance(ctx, LatteParser.SExpContext):
             self.enter_expr(ctx.expr())
+        elif isinstance(ctx, LatteParser.ForContext):
+            self.enter_for(ctx, ret_type)
         elif isinstance(ctx, LatteParser.EmptyContext):
             return
         else:
-            self.error(ctx, "Unresolved instance in enter_block StmtContext")
+            self.error(ctx, "Unresolved instance in enter_stmt StmtContext")
 

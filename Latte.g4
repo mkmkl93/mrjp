@@ -17,25 +17,27 @@ block
     ;
 
 stmt
-    : ';'                                # Empty
-    | block                              # BlockStmt
-    | type_ item ( ',' item )* ';'       # Decl
-    | ID '=' expr ';'                    # Ass
-    | ID '++' ';'                        # Incr
-    | ID '--' ';'                        # Decr
-    | 'return' expr ';'                  # Ret
-    | 'return' ';'                       # VRet
-    | 'if' '(' expr ')' stmt             # Cond
-    | 'if' '(' expr ')' stmt 'else' stmt # CondElse
-    | 'while' '(' expr ')' stmt          # While
-    | expr ';'                           # SExp
+    : ';'                                       # Empty
+    | block                                     # BlockStmt
+    | type_ item ( ',' item )* ';'              # Decl
+    | ID ('[' expr ']')? '=' expr ';'           # Ass
+    | ID ('[' expr ']')? '++' ';'               # Incr
+    | ID ('[' expr ']')? '--' ';'               # Decr
+    | 'return' expr ';'                         # Ret
+    | 'return' ';'                              # VRet
+    | 'if' '(' expr ')' stmt                    # Cond
+    | 'if' '(' expr ')' stmt 'else' stmt        # CondElse
+    | 'while' '(' expr ')' stmt                 # While
+    | expr ';'                                  # SExp
+    | 'for' '(' type_ ID ':' ID ')' stmt        # For
     ;
 
 type_
-    : 'int'     # Int
-    | 'string'  # Str
-    | 'boolean' # Bool
-    | 'void'    # Void
+    : 'int'         # Int
+    | 'string'      # Str
+    | 'boolean'     # Bool
+    | 'void'        # Void
+    | type_ '[]'    # Array
     ;
 
 item
@@ -44,20 +46,24 @@ item
     ;
 
 expr
-    : ('-'|'!') expr                      # EUnOp
-    | expr mulOp expr                     # EMulOp
-    | expr addOp expr                     # EAddOp
-    | expr relOp expr                     # ERelOp
-    | <assoc=right> expr '&&' expr        # EAnd
-    | <assoc=right> expr '||' expr        # EOr
-    | ID                                  # EId
-    | INT                                 # EInt
-    | 'true'                              # ETrue
-    | 'false'                             # EFalse
-    | ID '(' ( expr ( ',' expr )* )? ')'  # EFunCall
-    | STR                           # EStr
-    | '(' expr ')'                  # EParen
+    : ('-'|'!') expr                        # EUnOp
+    | expr mulOp expr                       # EMulOp
+    | expr addOp expr                       # EAddOp
+    | expr relOp expr                       # ERelOp
+    | <assoc=right> expr '&&' expr          # EAnd
+    | <assoc=right> expr '||' expr          # EOr
+    | ID                                    # EId
+    | INT                                   # EInt
+    | 'true'                                # ETrue
+    | 'false'                               # EFalse
+    | ID '(' ( expr ( ',' expr )* )? ')'    # EFunCall
+    | STR                                   # EStr
+    | 'new' type_ '[' expr ']'              # ENew
+    | '(' expr ')'                          # EParen
+    | ID '.' 'length'                       # ELength
+    | ID '[' expr ']'                       # EArrEl
     ;
+
 
 addOp
     : '+'
